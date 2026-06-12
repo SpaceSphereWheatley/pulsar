@@ -137,6 +137,12 @@ _news_cache: list = []
 _news_cache_ts: float = 0.0
 _NEWS_TTL = 1800  # 30 minutes
 
+# ── NOK exchange rate ─────────────────────────────────────────────────────────
+
+_nok_rate: float = 10.5  # fallback USD→NOK
+_nok_rate_ts: float = 0.0
+_NOK_TTL = 3600  # 1 hour
+
 
 async def refresh_news() -> None:
     global _news_cache, _news_cache_ts
@@ -154,6 +160,23 @@ async def refresh_news() -> None:
 
 def get_news_cache() -> tuple[list, float]:
     return _news_cache, _news_cache_ts
+
+
+async def refresh_nok_rate() -> None:
+    global _nok_rate, _nok_rate_ts
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get("https://api.frankfurter.app/latest?from=USD&to=NOK")
+            resp.raise_for_status()
+            _nok_rate = float(resp.json()["rates"]["NOK"])
+            _nok_rate_ts = time.time()
+            logger.info("NOK rate refreshed: %.4f", _nok_rate)
+    except Exception as exc:
+        logger.error("Failed to refresh NOK rate: %s", exc)
+
+
+def get_nok_rate() -> float:
+    return _nok_rate
 
 
 # ── Startup init ─────────────────────────────────────────────────────────────

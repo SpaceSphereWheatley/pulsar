@@ -100,11 +100,14 @@ def client(tmp_path, monkeypatch):
     data._ohlc_cache = {coin_id: {"data": MOCK_OHLC, "ts": time.time()} for coin_id in MOCK_COINS}
     data._news_cache = MOCK_NEWS.copy()
     data._news_cache_ts = time.time()
+    data._nok_rate = 10.5
+    data._nok_rate_ts = time.time()
 
     with (
         patch.object(main, "init_data", return_value=None),
         patch.object(main, "refresh_feargreed", new=AsyncMock()),
         patch.object(main, "refresh_news", new=AsyncMock()),
+        patch.object(main, "refresh_nok_rate", new=AsyncMock()),
         patch.object(data, "refresh_ohlc", MagicMock()),
         patch.object(data, "refresh_coins", MagicMock()),
         patch.object(scheduler, "add_job", MagicMock()),
@@ -121,3 +124,10 @@ def auth_headers(client):
     r = client.post("/api/auth/login", json={"username": "admin", "password": "admin"})
     assert r.status_code == 200, f"Login failed: {r.text}"
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+@pytest.fixture
+def funded_headers(client, auth_headers):
+    """Admin auth headers with $10,000 pre-deposited in the default portfolio."""
+    client.post("/api/portfolio/deposit", json={"amount": 10_000}, headers=auth_headers)
+    return auth_headers

@@ -24,10 +24,12 @@ from data import (
     get_coins_cache,
     get_feargreed_cache,
     get_news_cache,
+    get_nok_rate,
     get_ohlc,
     init_data,
     refresh_feargreed,
     refresh_news,
+    refresh_nok_rate,
 )
 from indicators import compute_indicators, compute_signal
 from ml import get_ml_score
@@ -79,6 +81,7 @@ async def lifespan(app: FastAPI):
     init_data()
     await refresh_feargreed()
     await refresh_news()
+    await refresh_nok_rate()
 
     import asyncio
 
@@ -115,6 +118,13 @@ async def lifespan(app: FastAPI):
         "interval",
         minutes=30,
         id="refresh_news",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        lambda: asyncio.ensure_future(refresh_nok_rate()),
+        "interval",
+        hours=1,
+        id="refresh_nok_rate",
         replace_existing=True,
     )
     scheduler.start()
@@ -296,6 +306,7 @@ def _fg_interpretation(value: int, trend: int) -> str:
 def _portfolio_response(username: str, pf_name: str = "default") -> dict:
     portfolio = load_portfolio(username, pf_name)
     coins_cache, _ = get_coins_cache()
+    nok_rate = get_nok_rate()
     holdings_list = []
     total_held = 0.0
 
@@ -315,26 +326,38 @@ def _portfolio_response(username: str, pf_name: str = "default") -> dict:
                 "avg_buy_price": h["avg_buy_price"],
                 "current_price": price,
                 "value": round(value, 2),
+                "value_nok": round(value * nok_rate, 2),
                 "pnl": round(pnl, 2),
+                "pnl_nok": round(pnl * nok_rate, 2),
                 "pnl_pct": round(pnl_pct, 2),
             }
         )
         total_held += value
 
     total_value = portfolio["cash"] + total_held
-    total_pnl = total_value - portfolio["initial_cash"]
-    total_pnl_pct = total_pnl / portfolio["initial_cash"] * 100
+    # Backward compat: old portfolios use initial_cash instead of total_deposited/total_withdrawn
+    total_deposited = portfolio.get("total_deposited", portfolio.get("initial_cash", 0.0))
+    total_withdrawn = portfolio.get("total_withdrawn", 0.0)
+    net_invested = total_deposited - total_withdrawn
+    total_pnl = total_value - net_invested
+    total_pnl_pct = (total_pnl / net_invested * 100) if net_invested > 0 else 0.0
 
     record_snapshot(username, total_value, portfolio["cash"], total_pnl_pct, pf_name)
 
     return {
         "portfolio_name": pf_name,
         "cash": round(portfolio["cash"], 2),
-        "initial_cash": portfolio["initial_cash"],
+        "cash_nok": round(portfolio["cash"] * nok_rate, 2),
+        "total_deposited": round(total_deposited, 2),
+        "total_withdrawn": round(total_withdrawn, 2),
+        "net_invested": round(net_invested, 2),
         "holdings": holdings_list,
         "total_value": round(total_value, 2),
+        "total_value_nok": round(total_value * nok_rate, 2),
         "total_pnl": round(total_pnl, 2),
+        "total_pnl_nok": round(total_pnl * nok_rate, 2),
         "total_pnl_pct": round(total_pnl_pct, 2),
+        "nok_rate": round(nok_rate, 4),
         "transactions": list(reversed(portfolio["transactions"])),
     }
 
@@ -671,6 +694,50 @@ def api_portfolio_reset(
 ):
     reset_portfolio(user["username"], portfolio)
     return _portfolio_response(user["username"], portfolio)
+
+
+@app.post("/api/portfolio/deposit")
+def api_portfolio_deposit(body: dict, user: dict = Depends(get_current_user)):
+    amount = float(body.get("amount", 0))
+    pf_name = body.get("portfolio", "default")
+    if amount <= 0:
+        raise HTTPException(400, "Amount must be positive")
+    pf = load_portfolio(user["username"], pf_name)
+    pf["cash"] += amount
+    pf["total_deposited"] = pf.get("total_deposited", pf.get("initial_cash", 0.0)) + amount
+    pf["transactions"].append(
+        {
+            "id": f"txn_{len(pf['transactions']) + 1:04d}",
+            "type": "deposit",
+            "total": amount,
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        }
+    )
+    save_portfolio(user["username"], pf, pf_name)
+    return _portfolio_response(user["username"], pf_name)
+
+
+@app.post("/api/portfolio/withdraw")
+def api_portfolio_withdraw(body: dict, user: dict = Depends(get_current_user)):
+    amount = float(body.get("amount", 0))
+    pf_name = body.get("portfolio", "default")
+    if amount <= 0:
+        raise HTTPException(400, "Amount must be positive")
+    pf = load_portfolio(user["username"], pf_name)
+    if amount > pf["cash"]:
+        raise HTTPException(400, "Insufficient cash to withdraw")
+    pf["cash"] -= amount
+    pf["total_withdrawn"] = pf.get("total_withdrawn", 0.0) + amount
+    pf["transactions"].append(
+        {
+            "id": f"txn_{len(pf['transactions']) + 1:04d}",
+            "type": "withdrawal",
+            "total": amount,
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        }
+    )
+    save_portfolio(user["username"], pf, pf_name)
+    return _portfolio_response(user["username"], pf_name)
 
 
 @app.get("/api/portfolio/recommendation")

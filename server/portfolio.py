@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 _PORTFOLIO_DIR = Path(__file__).parent
-_INITIAL_CASH = 10_000.0
+_INITIAL_CASH = 0.0
 _SAFE_NAME_RE = re.compile(r"^[a-z0-9_\-]{1,32}$")
 
 
@@ -26,7 +26,8 @@ def _path(username: str, name: str = "default") -> Path:
 def _empty() -> dict:
     return {
         "cash": _INITIAL_CASH,
-        "initial_cash": _INITIAL_CASH,
+        "total_deposited": _INITIAL_CASH,
+        "total_withdrawn": 0.0,
         "holdings": {},
         "transactions": [],
     }

@@ -151,10 +151,11 @@
           <label class="text-xs text-slate-400 whitespace-nowrap">Portfolio</label>
           <select id="pfSelector" onchange="switchPortfolio(this.value)" style="max-width:200px"></select>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <input id="newPfName" type="text" placeholder="new name" style="width:130px" />
           <button class="btn btn-ghost text-xs" onclick="createPortfolio()">+ New</button>
           <button class="btn btn-danger text-xs" onclick="deletePortfolio()" id="deletePfBtn">Delete</button>
+          <button id="currencyToggle" class="btn btn-ghost text-xs" onclick="toggleCurrency()">Show in NOK</button>
         </div>
       </div>
 
@@ -169,6 +170,24 @@
       <div id="pfRecommendations" class="card p-5">
         <div class="text-xs text-slate-400 uppercase tracking-widest mb-3">What should I do?</div>
         <div class="flex items-center gap-2 text-slate-500 text-sm"><div class="spinner"></div><span>Loading advice…</span></div>
+      </div>
+
+      <!-- Funds card -->
+      <div class="card p-5">
+        <div class="text-xs text-slate-400 uppercase tracking-widest mb-4">Funds</div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">Amount (USD)</label>
+              <input id="fundAmount" type="number" placeholder="1000" min="1" />
+            </div>
+            <div class="flex gap-3">
+              <button class="btn btn-primary flex-1" onclick="doFund('deposit')">Deposit</button>
+              <button class="btn btn-ghost flex-1"  onclick="doFund('withdraw')">Withdraw</button>
+            </div>
+          </div>
+          <div id="fundMsg" class="flex items-center text-sm text-slate-400"></div>
+        </div>
       </div>
 
       <div class="card p-5">
@@ -258,6 +277,8 @@ let _refreshTimer  = null;
 let _watchlist     = [];
 let _activePf      = 'default';
 let _portfolioNames = ['default'];
+let _currency = localStorage.getItem('pulsar_currency') || 'USD';
+let _nokRate  = 10.5;
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 function authHdrs() {
@@ -380,6 +401,19 @@ function fmtPct(n) {
 }
 function fmtUsd(n) {
   return '$' + n.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtNok(n) {
+  return 'kr ' + Math.round(n).toLocaleString('nb-NO');
+}
+function fmtVal(usd, nok) {
+  return _currency === 'NOK' ? fmtNok(nok ?? (usd * _nokRate)) : fmtUsd(usd);
+}
+function toggleCurrency() {
+  _currency = _currency === 'USD' ? 'NOK' : 'USD';
+  localStorage.setItem('pulsar_currency', _currency);
+  const btn = document.getElementById('currencyToggle');
+  if (btn) btn.textContent = _currency === 'NOK' ? 'Show in USD' : 'Show in NOK';
+  renderPortfolio();
 }
 function fmtLarge(n) {
   if (n >= 1e12) return '$' + (n / 1e12).toFixed(2) + 'T';
@@ -790,6 +824,9 @@ async function loadPortfolio() {
   const res = await apiFetch(`/api/portfolio?portfolio=${_activePf}`, { headers: authHdrs() });
   if (!res || !res.ok) return;
   _portfolioData = await res.json();
+  if (_portfolioData.nok_rate) _nokRate = _portfolioData.nok_rate;
+  const btn = document.getElementById('currencyToggle');
+  if (btn) btn.textContent = _currency === 'NOK' ? 'Show in USD' : 'Show in NOK';
   renderPortfolio();
   loadRecommendations();
   loadPortfolioHistory();
@@ -806,12 +843,27 @@ function renderPortfolio() {
   if (!_portfolioData) return;
   const p = _portfolioData;
   const pnlCls = p.total_pnl >= 0 ? 'pos' : 'neg';
+  const isCurrNok = _currency === 'NOK';
 
   document.getElementById('pfHero').innerHTML = `
-    <div><div class="text-xs text-slate-500 mb-1">Total Value</div><div class="text-xl font-bold">${fmtUsd(p.total_value)}</div></div>
-    <div><div class="text-xs text-slate-500 mb-1">Cash Available</div><div class="font-semibold">${fmtUsd(p.cash)}</div></div>
-    <div><div class="text-xs text-slate-500 mb-1">Profit / Loss</div><div class="font-semibold ${pnlCls}">${fmtUsd(p.total_pnl)} (${p.total_pnl_pct.toFixed(2)}%)</div></div>
-    <div><div class="text-xs text-slate-500 mb-1">Positions</div><div class="font-semibold">${p.holdings.length}</div></div>
+    <div>
+      <div class="text-xs text-slate-500 mb-1">Total Value</div>
+      <div class="text-xl font-bold">${fmtVal(p.total_value, p.total_value_nok)}</div>
+      ${isCurrNok ? '' : `<div class="text-xs text-slate-600 mt-0.5">${fmtNok(p.total_value_nok)}</div>`}
+    </div>
+    <div>
+      <div class="text-xs text-slate-500 mb-1">Cash Available</div>
+      <div class="font-semibold">${fmtVal(p.cash, p.cash_nok)}</div>
+      ${isCurrNok ? '' : `<div class="text-xs text-slate-600 mt-0.5">${fmtNok(p.cash_nok)}</div>`}
+    </div>
+    <div>
+      <div class="text-xs text-slate-500 mb-1">Net Invested</div>
+      <div class="font-semibold">${fmtVal(p.net_invested, p.net_invested * _nokRate)}</div>
+    </div>
+    <div>
+      <div class="text-xs text-slate-500 mb-1">Profit / Loss</div>
+      <div class="font-semibold ${pnlCls}">${fmtVal(p.total_pnl, p.total_pnl_nok)} (${p.total_pnl_pct.toFixed(2)}%)</div>
+    </div>
   `;
 
   if (p.holdings.length === 0) {
@@ -835,8 +887,11 @@ function renderPortfolio() {
               <td>${parseFloat(h.amount).toFixed(6)}</td>
               <td>${fmtPrice(h.avg_buy_price)}</td>
               <td>${fmtPrice(h.current_price)}</td>
-              <td>${fmtUsd(h.value)}</td>
-              <td class="${h.pnl >= 0 ? 'pos' : 'neg'}">${fmtUsd(h.pnl)} (${h.pnl_pct.toFixed(2)}%)</td>
+              <td>
+                ${fmtVal(h.value, h.value_nok)}
+                ${_currency === 'USD' ? `<div class="text-xs text-slate-600">${fmtNok(h.value_nok)}</div>` : ''}
+              </td>
+              <td class="${h.pnl >= 0 ? 'pos' : 'neg'}">${fmtVal(h.pnl, h.pnl_nok)} (${h.pnl_pct.toFixed(2)}%)</td>
             </tr>
           `).join('')}
         </tbody>
@@ -848,25 +903,31 @@ function renderPortfolio() {
     document.getElementById('txnTable').innerHTML =
       '<div class="p-5 text-slate-500 text-sm">No transactions yet.</div>';
   } else {
+    const txnTypeHtml = {
+      buy:        '<span class="pos font-semibold">BUY</span>',
+      sell:       '<span class="neg font-semibold">SELL</span>',
+      deposit:    '<span style="color:#818cf8" class="font-semibold">DEPOSIT</span>',
+      withdrawal: '<span style="color:#fb923c" class="font-semibold">WITHDRAWAL</span>',
+    };
     document.getElementById('txnTable').innerHTML = `
       <table>
         <thead>
           <tr><th>ID</th><th>Type</th><th>Coin</th><th>Amount</th><th>Price</th><th>Total</th><th class="hidden sm:table-cell">Time</th></tr>
         </thead>
         <tbody>
-          ${p.transactions.map(t => `
+          ${p.transactions.map(t => {
+            const isTrade = t.type === 'buy' || t.type === 'sell';
+            return `
             <tr>
               <td class="text-slate-500 text-xs">${t.id}</td>
-              <td>${t.type === 'buy'
-                ? '<span class="pos font-semibold">BUY</span>'
-                : '<span class="neg font-semibold">SELL</span>'}</td>
-              <td>${t.coin_id.toUpperCase()}</td>
-              <td>${parseFloat(t.amount).toFixed(6)}</td>
-              <td>${fmtPrice(t.price)}</td>
+              <td>${txnTypeHtml[t.type] || t.type.toUpperCase()}</td>
+              <td>${isTrade ? t.coin_id.toUpperCase() : '<span class="text-slate-600">—</span>'}</td>
+              <td>${isTrade ? parseFloat(t.amount).toFixed(6) : '<span class="text-slate-600">—</span>'}</td>
+              <td>${isTrade ? fmtPrice(t.price) : '<span class="text-slate-600">—</span>'}</td>
               <td>${fmtUsd(t.total)}</td>
               <td class="hidden sm:table-cell text-slate-500 text-xs">${new Date(t.timestamp).toLocaleString()}</td>
-            </tr>
-          `).join('')}
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
     `;
@@ -893,6 +954,7 @@ async function doTrade(type) {
     return;
   }
   _portfolioData = await res.json();
+  if (_portfolioData.nok_rate) _nokRate = _portfolioData.nok_rate;
   renderPortfolio();
   loadPortfolioHistory();
   document.getElementById('tradeAmount').value = '';
@@ -901,16 +963,46 @@ async function doTrade(type) {
   toast(`${verb} ${fmtUsd(usd_amount)} of ${coin_id.toUpperCase()}`);
 }
 
+async function doFund(type) {
+  const amount = parseFloat(document.getElementById('fundAmount').value);
+  const msgEl  = document.getElementById('fundMsg');
+  if (!amount || amount <= 0) {
+    msgEl.innerHTML = '<span class="neg">Enter a positive amount.</span>';
+    return;
+  }
+  const endpoint = type === 'deposit' ? '/api/portfolio/deposit' : '/api/portfolio/withdraw';
+  const res = await apiFetch(endpoint, {
+    method: 'POST',
+    headers: authHdrs(),
+    body: JSON.stringify({ amount, portfolio: _activePf }),
+  });
+  if (!res) return;
+  if (!res.ok) {
+    const err = await res.json();
+    msgEl.innerHTML = `<span class="neg">${err.detail}</span>`;
+    return;
+  }
+  _portfolioData = await res.json();
+  if (_portfolioData.nok_rate) _nokRate = _portfolioData.nok_rate;
+  renderPortfolio();
+  loadPortfolioHistory();
+  document.getElementById('fundAmount').value = '';
+  const verb = type === 'deposit' ? 'Deposited' : 'Withdrew';
+  msgEl.innerHTML = `<span class="pos">✓ ${verb} ${fmtUsd(amount)}</span>`;
+  toast(`${verb} ${fmtUsd(amount)}`);
+}
+
 async function resetPortfolio() {
-  if (!confirm('Reset portfolio to $10,000 cash? This cannot be undone.')) return;
+  if (!confirm('Reset portfolio to $0? All holdings and transactions will be cleared. This cannot be undone.')) return;
   const res = await apiFetch(`/api/portfolio/reset?portfolio=${_activePf}`, {
     method: 'POST', headers: authHdrs(),
   });
   if (!res || !res.ok) return;
   _portfolioData = await res.json();
+  if (_portfolioData.nok_rate) _nokRate = _portfolioData.nok_rate;
   renderPortfolio();
   loadPortfolioHistory();
-  toast('Portfolio reset to $10,000');
+  toast('Portfolio reset to $0');
 }
 
 function exportCsv() {

@@ -160,47 +160,47 @@ def test_portfolio_requires_auth(client):
 
 def test_portfolio_initial_state(client, auth_headers):
     body = client.get("/api/portfolio", headers=auth_headers).json()
-    assert body["cash"] == 10_000.0
+    assert body["cash"] == 0.0
     assert body["holdings"] == []
-    assert body["total_value"] == 10_000.0
+    assert body["total_value"] == 0.0
     assert body["total_pnl"] == 0.0
 
 
-def test_portfolio_buy_deducts_cash(client, auth_headers):
+def test_portfolio_buy_deducts_cash(client, funded_headers):
     body = client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 1000},
-        headers=auth_headers,
+        headers=funded_headers,
     ).json()
     assert body["cash"] == pytest.approx(9_000.0)
     assert len(body["holdings"]) == 1
     assert body["holdings"][0]["coin_id"] == "bitcoin"
 
 
-def test_portfolio_buy_records_transaction(client, auth_headers):
+def test_portfolio_buy_records_transaction(client, funded_headers):
     client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 500},
-        headers=auth_headers,
+        headers=funded_headers,
     )
-    txns = client.get("/api/portfolio", headers=auth_headers).json()["transactions"]
-    assert len(txns) == 1
-    assert txns[0]["type"] == "buy"
-    assert txns[0]["total"] == 500
+    txns = client.get("/api/portfolio", headers=funded_headers).json()["transactions"]
+    buy_txns = [t for t in txns if t["type"] == "buy"]
+    assert len(buy_txns) == 1
+    assert buy_txns[0]["total"] == 500
 
 
-def test_portfolio_buy_twice_averages_price(client, auth_headers):
+def test_portfolio_buy_twice_averages_price(client, funded_headers):
     client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 1000},
-        headers=auth_headers,
+        headers=funded_headers,
     )
     client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 1000},
-        headers=auth_headers,
+        headers=funded_headers,
     )
-    holdings = client.get("/api/portfolio", headers=auth_headers).json()["holdings"]
+    holdings = client.get("/api/portfolio", headers=funded_headers).json()["holdings"]
     assert len(holdings) == 1
     assert holdings[0]["coin_id"] == "bitcoin"
 
@@ -238,30 +238,30 @@ def test_portfolio_buy_unknown_coin_returns_404(client, auth_headers):
     )
 
 
-def test_portfolio_sell_reduces_holding(client, auth_headers):
+def test_portfolio_sell_reduces_holding(client, funded_headers):
     client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 1000},
-        headers=auth_headers,
+        headers=funded_headers,
     )
     body = client.post(
         "/api/portfolio/sell",
         json={"coin_id": "bitcoin", "usd_amount": 500},
-        headers=auth_headers,
+        headers=funded_headers,
     ).json()
     assert body["cash"] == pytest.approx(9_500.0)
 
 
-def test_portfolio_sell_full_position_removes_holding(client, auth_headers):
+def test_portfolio_sell_full_position_removes_holding(client, funded_headers):
     client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 1000},
-        headers=auth_headers,
+        headers=funded_headers,
     )
     body = client.post(
         "/api/portfolio/sell",
         json={"coin_id": "bitcoin", "usd_amount": 1000},
-        headers=auth_headers,
+        headers=funded_headers,
     ).json()
     assert body["holdings"] == []
 
@@ -277,32 +277,69 @@ def test_portfolio_sell_no_holding_returns_400(client, auth_headers):
     )
 
 
-def test_portfolio_sell_over_value_returns_400(client, auth_headers):
+def test_portfolio_sell_over_value_returns_400(client, funded_headers):
     client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 100},
-        headers=auth_headers,
+        headers=funded_headers,
     )
     assert (
         client.post(
             "/api/portfolio/sell",
             json={"coin_id": "bitcoin", "usd_amount": 99_999},
-            headers=auth_headers,
+            headers=funded_headers,
         ).status_code
         == 400
     )
 
 
-def test_portfolio_reset(client, auth_headers):
+def test_portfolio_reset(client, funded_headers):
     client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 1000},
-        headers=auth_headers,
+        headers=funded_headers,
     )
-    body = client.post("/api/portfolio/reset", headers=auth_headers).json()
-    assert body["cash"] == 10_000.0
+    body = client.post("/api/portfolio/reset", headers=funded_headers).json()
+    assert body["cash"] == 0.0
     assert body["holdings"] == []
     assert body["transactions"] == []
+
+
+def test_portfolio_deposit_adds_cash(client, auth_headers):
+    body = client.post(
+        "/api/portfolio/deposit", json={"amount": 5_000}, headers=auth_headers
+    ).json()
+    assert body["cash"] == pytest.approx(5_000.0)
+    assert body["total_deposited"] == pytest.approx(5_000.0)
+    assert body["net_invested"] == pytest.approx(5_000.0)
+
+
+def test_portfolio_deposit_negative_returns_400(client, auth_headers):
+    assert (
+        client.post(
+            "/api/portfolio/deposit", json={"amount": -100}, headers=auth_headers
+        ).status_code
+        == 400
+    )
+
+
+def test_portfolio_withdraw_reduces_cash(client, auth_headers):
+    client.post("/api/portfolio/deposit", json={"amount": 5_000}, headers=auth_headers)
+    body = client.post(
+        "/api/portfolio/withdraw", json={"amount": 2_000}, headers=auth_headers
+    ).json()
+    assert body["cash"] == pytest.approx(3_000.0)
+    assert body["total_withdrawn"] == pytest.approx(2_000.0)
+    assert body["net_invested"] == pytest.approx(3_000.0)
+
+
+def test_portfolio_withdraw_over_cash_returns_400(client, auth_headers):
+    assert (
+        client.post(
+            "/api/portfolio/withdraw", json={"amount": 1_000}, headers=auth_headers
+        ).status_code
+        == 400
+    )
 
 
 def test_recommendation_requires_auth(client):
@@ -406,15 +443,20 @@ def test_delete_default_portfolio_returns_400(client, auth_headers):
     assert client.delete("/api/portfolios/default", headers=auth_headers).status_code == 400
 
 
-def test_named_portfolio_independent(client, auth_headers):
-    client.post("/api/portfolios", json={"name": "savings"}, headers=auth_headers)
+def test_named_portfolio_independent(client, funded_headers):
+    client.post("/api/portfolios", json={"name": "savings"}, headers=funded_headers)
+    client.post(
+        "/api/portfolio/deposit",
+        json={"amount": 10_000, "portfolio": "savings"},
+        headers=funded_headers,
+    )
     client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 500, "portfolio": "savings"},
-        headers=auth_headers,
+        headers=funded_headers,
     )
-    default_cash = client.get("/api/portfolio", headers=auth_headers).json()["cash"]
-    savings_cash = client.get("/api/portfolio?portfolio=savings", headers=auth_headers).json()[
+    default_cash = client.get("/api/portfolio", headers=funded_headers).json()["cash"]
+    savings_cash = client.get("/api/portfolio?portfolio=savings", headers=funded_headers).json()[
         "cash"
     ]
     assert default_cash == pytest.approx(10_000.0)
@@ -437,13 +479,13 @@ def test_portfolio_history_returns_list(client, auth_headers):
     assert "total_value" in body[0]
 
 
-def test_users_portfolios_are_isolated(client, auth_headers):
+def test_users_portfolios_are_isolated(client, funded_headers, auth_headers):
     """Two different users should have independent portfolios."""
-    # Admin buys bitcoin
+    # Admin buys bitcoin (has $10k from funded_headers deposit)
     client.post(
         "/api/portfolio/buy",
         json={"coin_id": "bitcoin", "usd_amount": 1000},
-        headers=auth_headers,
+        headers=funded_headers,
     )
 
     # Create and log in as a second user
@@ -457,7 +499,7 @@ def test_users_portfolios_are_isolated(client, auth_headers):
     ).json()["access_token"]
     alice_headers = {"Authorization": f"Bearer {alice_token}"}
 
-    # Alice should start fresh
+    # Alice should start with $0 and no holdings
     alice_portfolio = client.get("/api/portfolio", headers=alice_headers).json()
-    assert alice_portfolio["cash"] == 10_000.0
+    assert alice_portfolio["cash"] == 0.0
     assert alice_portfolio["holdings"] == []
