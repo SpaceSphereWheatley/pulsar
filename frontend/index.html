@@ -755,7 +755,7 @@ async function loadSignals() {
           <th>Coin</th>
           <th>Signal</th>
           <th>Score</th>
-          <th>AI Score</th>
+          <th title="Per-coin Ridge regression. Experimental — not a forecast.">AI Score <span class="text-slate-600 normal-case">(experimental)</span></th>
           <th>Overall</th>
           <th class="hidden sm:table-cell">Why?</th>
         </tr>
@@ -766,7 +766,7 @@ async function loadSignals() {
             <td class="font-semibold">${s.symbol.toUpperCase()}</td>
             <td>${signalTag(s.signal)}</td>
             <td>${s.signal_score.toFixed(0)}</td>
-            <td class="text-slate-500">${s.ml_score != null ? s.ml_score.toFixed(0) : '—'}</td>
+            <td class="text-slate-500">${s.ml_score != null ? s.ml_score.toFixed(0) : '—'}${s.ml_quality != null ? `<span class="text-xs text-slate-600 ml-1" title="In-sample directional hit-rate">(${s.ml_quality.toFixed(0)}%)</span>` : ''}</td>
             <td>${signalTag(s.composite_verdict)} <span class="text-xs text-slate-500 ml-1">${s.composite_score.toFixed(0)}</span></td>
             <td class="hidden sm:table-cell text-xs text-slate-400">${(s.reasons || []).join(' · ')}</td>
           </tr>

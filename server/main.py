@@ -35,7 +35,7 @@ from data import (
     refresh_nok_rate,
 )
 from indicators import compute_indicators, compute_signal
-from ml import get_ml_score
+from ml import get_ml_quality, get_ml_score, load_scores
 from portfolio import (
     create_portfolio,
     delete_portfolio,
@@ -122,6 +122,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting up…")
     warn_insecure_defaults()
     seed_admin()
+    load_scores()
     init_data()
     await refresh_feargreed()
     await refresh_news()
@@ -577,6 +578,7 @@ def api_signals():
                 "signal": sig["signal"],
                 "signal_score": sig["signal_score"],
                 "ml_score": ml,
+                "ml_quality": get_ml_quality(coin_id),
                 "composite_score": round(comp, 1),
                 "composite_verdict": verdict,
                 "composite_label": label,

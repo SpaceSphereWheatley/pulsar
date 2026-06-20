@@ -12,3 +12,8 @@ build/
 venv/
 server/portfolio.json
 server/cache.json
+server/ml_scores.json
+server/portfolio_*.json
+server/portfolio_history_*.json
+server/watchlist_*.json
+server/users.json

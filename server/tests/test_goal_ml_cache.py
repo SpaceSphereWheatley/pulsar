@@ -20,13 +20,11 @@ def test_ml_score_is_none_for_unknown_coin():
     assert ml.get_ml_score("does-not-exist") is None
 
 
-@pytest.mark.xfail(reason="G8: ML scores are in-memory only; lost on restart", strict=False)
 def test_ml_scores_persist_to_disk():
     """G8: scores must survive a restart (load/save helpers exist)."""
     assert hasattr(ml, "save_scores") and hasattr(ml, "load_scores")
 
 
-@pytest.mark.xfail(reason="G8: /api/signals exposes no ML quality metric", strict=False)
 def test_signals_expose_ml_quality_metric(client):
     """G8: each signal must carry an auditable ML quality metric (e.g. hit-rate)."""
     r = client.get("/api/signals")

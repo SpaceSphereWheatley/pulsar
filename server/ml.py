@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import logging
+import os
+import tempfile
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -9,11 +14,51 @@ import pandas as pd
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 
+logger = logging.getLogger(__name__)
+
 _ml_scores: dict[str, float] = {}
+# Auditable quality metric per coin: in-sample directional hit-rate (0–100), i.e.
+# how often the model's predicted return sign matched the realized forward return.
+_ml_quality: dict[str, float] = {}
+
+_SCORES_FILE = Path(__file__).parent / "ml_scores.json"
 
 
 def get_ml_score(coin_id: str) -> Optional[float]:
     return _ml_scores.get(coin_id)
+
+
+def get_ml_quality(coin_id: str) -> Optional[float]:
+    """Directional hit-rate (0–100) for the coin's model, or None if untrained."""
+    return _ml_quality.get(coin_id)
+
+
+def save_scores() -> None:
+    """Persist ML scores + quality so a restart doesn't blank /api/signals for 6h."""
+    payload = {"scores": _ml_scores, "quality": _ml_quality}
+    fd, tmp = tempfile.mkstemp(dir=str(_SCORES_FILE.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(json.dumps(payload))
+        os.replace(tmp, _SCORES_FILE)
+    except Exception:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
+def load_scores() -> None:
+    """Load persisted ML scores + quality from disk (no-op if the file is absent)."""
+    global _ml_scores, _ml_quality
+    if not _SCORES_FILE.exists():
+        return
+    try:
+        payload = json.loads(_SCORES_FILE.read_text())
+        _ml_scores = payload.get("scores", {})
+        _ml_quality = payload.get("quality", {})
+        logger.info("Loaded %d persisted ML scores", len(_ml_scores))
+    except Exception as exc:
+        logger.warning("Could not load persisted ML scores: %s", exc)
 
 
 def _build_dataset(
@@ -74,9 +119,10 @@ def _build_dataset(
 
 
 def refresh_ml_scores(ohlc_cache: dict) -> None:
-    """Train a Ridge model per coin and populate _ml_scores."""
-    global _ml_scores
+    """Train a Ridge model per coin and populate _ml_scores + _ml_quality."""
+    global _ml_scores, _ml_quality
     new_scores: dict[str, float] = {}
+    new_quality: dict[str, float] = {}
 
     for coin_id, entry in ohlc_cache.items():
         ohlc = entry.get("data") if isinstance(entry, dict) else entry
@@ -100,7 +146,18 @@ def refresh_ml_scores(ohlc_cache: dict) -> None:
             # Map predicted return to 0-100 via percentile rank vs training targets
             score = round(float(np.mean(y < pred)) * 100, 1)
             new_scores[coin_id] = max(0.0, min(100.0, score))
+
+            # Auditable quality: in-sample directional hit-rate (% of rows where
+            # the predicted return sign matched the realized forward return).
+            y_pred = model.predict(X_s)
+            hit_rate = float(np.mean(np.sign(y_pred) == np.sign(y))) * 100
+            new_quality[coin_id] = round(hit_rate, 1)
         except Exception:
             pass
 
     _ml_scores = new_scores
+    _ml_quality = new_quality
+    try:
+        save_scores()
+    except Exception as exc:
+        logger.warning("Could not persist ML scores: %s", exc)

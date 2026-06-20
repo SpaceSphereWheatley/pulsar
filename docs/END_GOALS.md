@@ -120,7 +120,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
   - `/api/signals` (or a new field) exposes a **backtested quality metric** per coin
     (e.g. directional hit-rate on held-out data) so the score is auditable.
   - UI labels the ML score **"experimental"** wherever shown. Verified in `index.html`.
-- **Status:** `[ ]` scores are in-memory only; no exposed quality metric.
+- **Status:** `[x]` `ml.save_scores()`/`load_scores()` persist to disk (loaded on boot); `/api/signals` exposes `ml_quality` (directional hit-rate); the Signals table labels the AI score "(experimental)".
 
 ### G9 — Caches survive a cold start
 - **Why (Programmer):** A restart currently re-hammers CoinGecko and shows 503s until warm.
@@ -193,7 +193,7 @@ PULSAR is **done** when every box below is checked:
 - [ ] **G5** Friendly empty-state + no 500s when OHLC absent (tested)
 - [x] **G6** Retry/backoff on all fetches + `/api/health` (tested)
 - [x] **G7** Pydantic validation on every POST → 422 not 500 (tested)
-- [ ] **G8** ML scores persist, expose a quality metric, labeled experimental
+- [x] **G8** ML scores persist, expose a quality metric, labeled experimental
 - [ ] **G9** Caches persist and load on boot (no-network boot test)
 - [x] **G10** Self-service password change (tested)
 - [ ] **G11** One-command cross-platform run (Docker/make)

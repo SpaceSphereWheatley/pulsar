@@ -24,7 +24,6 @@ def test_frontend_has_not_financial_advice_disclaimer():
 # ── G8 (UI) — the ML score is labeled experimental wherever shown ─────────────
 
 
-@pytest.mark.xfail(reason="G8: ML score is not labeled 'experimental' in the UI", strict=False)
 def test_frontend_labels_ml_experimental():
     html = INDEX.read_text().lower()
     assert "experimental" in html
