@@ -30,3 +30,19 @@ jobs:
         run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Run tests
         run: python -m pytest --cov=server --cov-report=term-missing --cov-fail-under=80
+
+  lighthouse:
+    name: Lighthouse Accessibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run Lighthouse CI (fails if Accessibility < 0.90)
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: ./lighthouserc.json

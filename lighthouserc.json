@@ -1,0 +1,22 @@
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "uvicorn server.main:app --host 127.0.0.1 --port 8000",
+      "startServerReadyPattern": "Uvicorn running on",
+      "startServerReadyTimeout": 30000,
+      "url": ["http://127.0.0.1:8000/"],
+      "numberOfRuns": 1,
+      "settings": {
+        "onlyCategories": ["accessibility"]
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:accessibility": ["error", { "minScore": 0.9 }]
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

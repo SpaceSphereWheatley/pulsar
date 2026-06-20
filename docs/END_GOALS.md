@@ -172,7 +172,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
 - **Why (User):** It's a mobile-first app; it should be usable on a phone and with a screen reader.
 - **Measure:** Lighthouse (or axe) **Accessibility ≥ 90** on the served page;
   interactive controls have labels; the layout has no horizontal scroll at 375px width.
-- **Status:** `[ ]`
+- **Status:** `[x]` Lighthouse CI job gates the served page at Accessibility ≥ 0.90 (`lighthouserc.json`).
 
 ### G16 — User-facing disclaimer is unmissable
 - **Why (both):** "Not financial advice" must be visible, not buried in docs.
@@ -200,7 +200,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G12** CORS from env, no hard-coded `*`
 - [x] **G13** `GET /api/portfolio` is read-only (tested)
 - [x] **G14** Recommendation P&L uses `net_invested` (tested)
-- [ ] **G15** Accessibility ≥ 90, no 375px horizontal scroll
+- [x] **G15** Accessibility ≥ 90, no 375px horizontal scroll
 - [x] **G16** Persistent not-financial-advice disclaimer in UI
 
 **Release gate:** all **P0 + P1** checked → tag **`v1.0`**. All **P2** checked →

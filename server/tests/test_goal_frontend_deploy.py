@@ -6,8 +6,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[2]
 INDEX = ROOT / "frontend" / "index.html"
 
@@ -48,9 +46,6 @@ def test_frontend_interactive_controls_have_accessible_names():
         assert inner.strip() != "" or "aria-label" in inner
 
 
-@pytest.mark.xfail(
-    reason="G15: Lighthouse/axe accessibility audit (>=90) not wired into CI", strict=False
-)
 def test_accessibility_audit_is_enforced():
     """G15: a Lighthouse/axe accessibility gate (>=90) must run in CI."""
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text().lower()
