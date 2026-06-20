@@ -15,7 +15,6 @@ INDEX = ROOT / "frontend" / "index.html"
 # ── G16 — not-financial-advice disclaimer is visible in the UI ────────────────
 
 
-@pytest.mark.xfail(reason="G16: no not-financial-advice disclaimer in the UI", strict=False)
 def test_frontend_has_not_financial_advice_disclaimer():
     html = INDEX.read_text().lower()
     assert "not financial advice" in html or "educational" in html

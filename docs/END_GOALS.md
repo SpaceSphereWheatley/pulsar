@@ -178,7 +178,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
 - **Why (both):** "Not financial advice" must be visible, not buried in docs.
 - **Measure:** the dashboard shows a persistent (or first-run) disclaimer that
   signals/scores/ML are educational and not advice. Present in `index.html`.
-- **Status:** `[ ]`
+- **Status:** `[x]` persistent footer disclaimer on every dashboard view.
 
 ---
 
@@ -201,7 +201,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G13** `GET /api/portfolio` is read-only (tested)
 - [x] **G14** Recommendation P&L uses `net_invested` (tested)
 - [ ] **G15** Accessibility ≥ 90, no 375px horizontal scroll
-- [ ] **G16** Persistent not-financial-advice disclaimer in UI
+- [x] **G16** Persistent not-financial-advice disclaimer in UI
 
 **Release gate:** all **P0 + P1** checked → tag **`v1.0`**. All **P2** checked →
 tag **`v1.1` "finished."**
