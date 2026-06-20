@@ -1,7 +1,9 @@
 """Virtual portfolio — per-user JSON persistence."""
 
 import json
+import os
 import re
+import tempfile
 from pathlib import Path
 
 _PORTFOLIO_DIR = Path(__file__).parent
@@ -44,7 +46,18 @@ def load_portfolio(username: str, name: str = "default") -> dict:
 
 
 def save_portfolio(username: str, portfolio: dict, name: str = "default") -> None:
-    _path(username, name).write_text(json.dumps(portfolio, indent=2))
+    # Atomic write: a crash mid-write must never truncate the real file. Write to
+    # a temp file in the same directory, then os.replace (atomic on POSIX/Windows).
+    path = _path(username, name)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(json.dumps(portfolio, indent=2))
+        os.replace(tmp, path)
+    except Exception:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
 
 
 def reset_portfolio(username: str, name: str = "default") -> dict:

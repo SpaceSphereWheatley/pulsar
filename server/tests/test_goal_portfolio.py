@@ -6,8 +6,6 @@ from __future__ import annotations
 
 import inspect
 
-import pytest
-
 import portfolio
 import portfolio_history
 from recommendation import recommend
@@ -58,14 +56,12 @@ def test_avg_buy_price_is_weighted_average(client, auth_headers):
     assert abs(holding["avg_buy_price"] - 67_000.0) < 1e-6
 
 
-@pytest.mark.xfail(reason="G4: save_portfolio is not atomic (no temp+rename)", strict=False)
 def test_portfolio_writes_are_atomic():
     """G4: a crash mid-write must never truncate the file → write temp, then rename."""
     src = inspect.getsource(portfolio.save_portfolio)
     assert "os.replace" in src or ".rename(" in src
 
 
-@pytest.mark.xfail(reason="G4: no portfolio export endpoint yet", strict=False)
 def test_portfolio_export_endpoint_exists(client, auth_headers):
     """G4: users can export their portfolio + transactions (CSV/JSON)."""
     r = client.get("/api/portfolio/export", headers=auth_headers)
@@ -75,7 +71,6 @@ def test_portfolio_export_endpoint_exists(client, auth_headers):
 # ── G13 — GET /api/portfolio must be read-only ────────────────────────────────
 
 
-@pytest.mark.xfail(reason="G13: GET writes a history snapshot as a side effect", strict=False)
 def test_get_portfolio_does_not_write_history(client, auth_headers):
     """G13: reading the portfolio must not mutate on-disk state."""
     hist_path = portfolio_history._path("admin")
@@ -88,9 +83,6 @@ def test_get_portfolio_does_not_write_history(client, auth_headers):
 # ── G14 — recommendation P&L uses net_invested, not legacy initial_cash ───────
 
 
-@pytest.mark.xfail(
-    reason="G14: recommend() still derives P&L from initial_cash=10000", strict=False
-)
 def test_recommendation_pnl_uses_net_invested():
     """G14: a $500-funded portfolio worth $600 is up 20%, not down 94%."""
     pf = {

@@ -14,12 +14,15 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
-from auth import create_token, decode_token
+from auth import create_token, decode_token, warn_insecure_defaults
 from backtest import run_backtest
 from data import (
+    cache_ages,
     get_coin_price,
     get_coins_cache,
     get_feargreed_cache,
@@ -27,12 +30,14 @@ from data import (
     get_nok_rate,
     get_ohlc,
     init_data,
+    load_caches,
     refresh_feargreed,
     refresh_news,
     refresh_nok_rate,
+    save_caches,
 )
 from indicators import compute_indicators, compute_signal
-from ml import get_ml_score
+from ml import get_ml_quality, get_ml_score, load_scores
 from portfolio import (
     create_portfolio,
     delete_portfolio,
@@ -44,7 +49,14 @@ from portfolio import (
 from portfolio_history import load_history, record_snapshot
 from recommendation import recommend
 from scheduler import scheduler
-from users import authenticate, create_user, delete_user, list_users, seed_admin
+from users import (
+    authenticate,
+    change_password,
+    create_user,
+    delete_user,
+    list_users,
+    seed_admin,
+)
 from watchlist import add_coin as wl_add
 from watchlist import load_watchlist
 from watchlist import remove_coin as wl_remove
@@ -56,6 +68,39 @@ logger = logging.getLogger(__name__)
 # ── Auth helpers ──────────────────────────────────────────────────────────────
 
 _oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+
+# ── Request models (validated → 422, never 500, on malformed input) ────────────
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
+
+
+class CreatePortfolioRequest(BaseModel):
+    name: str
+
+
+class TradeRequest(BaseModel):
+    coin_id: str
+    usd_amount: float
+    portfolio: str = "default"
+
+
+class FundsRequest(BaseModel):
+    amount: float
+    portfolio: str = "default"
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 def get_current_user(token: str = Depends(_oauth2)) -> dict:
@@ -77,11 +122,15 @@ def require_admin(user: dict = Depends(get_current_user)) -> dict:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up…")
+    warn_insecure_defaults()
     seed_admin()
+    load_scores()
+    load_caches()
     init_data()
     await refresh_feargreed()
     await refresh_news()
     await refresh_nok_rate()
+    save_caches()
 
     import asyncio
 
@@ -127,6 +176,13 @@ async def lifespan(app: FastAPI):
         id="refresh_nok_rate",
         replace_existing=True,
     )
+    scheduler.add_job(
+        _snapshot_all_portfolios,
+        "interval",
+        hours=24,
+        id="snapshot_portfolios",
+        replace_existing=True,
+    )
     scheduler.start()
     logger.info("Scheduler started")
     yield
@@ -143,9 +199,19 @@ def _refresh_ml() -> None:
 
 app = FastAPI(title="Pulsar", lifespan=lifespan)
 
+# CORS origins come from PULSAR_CORS_ORIGINS (comma-separated), defaulting to the
+# uvicorn-dev (8000) and start.sh (8001) ports. No hard-coded wildcard.
+_cors_origins = [
+    o.strip()
+    for o in os.environ.get(
+        "PULSAR_CORS_ORIGINS", "http://localhost:8000,http://localhost:8001"
+    ).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -342,8 +408,6 @@ def _portfolio_response(username: str, pf_name: str = "default") -> dict:
     total_pnl = total_value - net_invested
     total_pnl_pct = (total_pnl / net_invested * 100) if net_invested > 0 else 0.0
 
-    record_snapshot(username, total_value, portfolio["cash"], total_pnl_pct, pf_name)
-
     return {
         "portfolio_name": pf_name,
         "cash": round(portfolio["cash"], 2),
@@ -362,12 +426,37 @@ def _portfolio_response(username: str, pf_name: str = "default") -> dict:
     }
 
 
+def _write_response(username: str, pf_name: str = "default") -> dict:
+    """Build the portfolio response AND record a daily history snapshot.
+
+    Used by the write endpoints (buy/sell/deposit/withdraw/reset). GET stays
+    read-only — it calls _portfolio_response, which never touches disk.
+    """
+    resp = _portfolio_response(username, pf_name)
+    record_snapshot(username, resp["total_value"], resp["cash"], resp["total_pnl_pct"], pf_name)
+    return resp
+
+
+def _snapshot_all_portfolios() -> None:
+    """Daily scheduler job: record a value snapshot for every user's portfolios."""
+    for u in list_users():
+        username = u["username"]
+        for pf_name in list_portfolios(username):
+            try:
+                resp = _portfolio_response(username, pf_name)
+                record_snapshot(
+                    username, resp["total_value"], resp["cash"], resp["total_pnl_pct"], pf_name
+                )
+            except Exception as exc:  # noqa: BLE001 - one bad portfolio shouldn't stop the job
+                logger.warning("Snapshot failed for %s/%s: %s", username, pf_name, exc)
+
+
 # ── Auth routes ───────────────────────────────────────────────────────────────
 
 
 @app.post("/api/auth/login")
-def api_login(body: dict):
-    user = authenticate(body.get("username", ""), body.get("password", ""))
+def api_login(body: LoginRequest):
+    user = authenticate(body.username, body.password)
     if user is None:
         raise HTTPException(401, "Invalid credentials")
     token = create_token(user["username"], user["is_admin"])
@@ -379,15 +468,25 @@ def api_login(body: dict):
     }
 
 
+@app.post("/api/auth/password")
+def api_change_password(body: PasswordChangeRequest, user: dict = Depends(get_current_user)):
+    """Self-service password change: verify the current password, set a new one."""
+    if not body.new_password:
+        raise HTTPException(400, "New password cannot be empty")
+    if not change_password(user["username"], body.current_password, body.new_password):
+        raise HTTPException(401, "Current password is incorrect")
+    return {"changed": True}
+
+
 @app.get("/api/auth/users")
 def api_list_users(admin: dict = Depends(require_admin)):
     return list_users()
 
 
 @app.post("/api/auth/users")
-def api_create_user(body: dict, admin: dict = Depends(require_admin)):
-    username = body.get("username", "").strip()
-    password = body.get("password", "")
+def api_create_user(body: CreateUserRequest, admin: dict = Depends(require_admin)):
+    username = body.username.strip()
+    password = body.password
     if not username or not password:
         raise HTTPException(400, "username and password are required")
     try:
@@ -404,6 +503,15 @@ def api_delete_user(username: str, admin: dict = Depends(require_admin)):
 
 
 # ── Public market routes ──────────────────────────────────────────────────────
+
+
+@app.get("/api/health")
+def api_health():
+    """Liveness + per-cache freshness. status is 'degraded' if the core coins
+    cache is empty (no market data to serve), otherwise 'ok'."""
+    caches = cache_ages()
+    status = "ok" if caches["coins"]["count"] else "degraded"
+    return {"status": status, "caches": caches}
 
 
 @app.get("/api/coins")
@@ -514,6 +622,7 @@ def api_signals():
                 "signal": sig["signal"],
                 "signal_score": sig["signal_score"],
                 "ml_score": ml,
+                "ml_quality": get_ml_quality(coin_id),
                 "composite_score": round(comp, 1),
                 "composite_verdict": verdict,
                 "composite_label": label,
@@ -573,8 +682,8 @@ def api_list_portfolios(user: dict = Depends(get_current_user)):
 
 
 @app.post("/api/portfolios")
-def api_create_portfolio(body: dict, user: dict = Depends(get_current_user)):
-    name = body.get("name", "").strip()
+def api_create_portfolio(body: CreatePortfolioRequest, user: dict = Depends(get_current_user)):
+    name = body.name.strip()
     if not name:
         raise HTTPException(400, "Portfolio name is required")
     try:
@@ -614,11 +723,72 @@ def api_portfolio_history(
     return load_history(user["username"], portfolio)
 
 
+@app.get("/api/portfolio/export")
+def api_portfolio_export(
+    user: dict = Depends(get_current_user),
+    portfolio: str = Query("default"),
+    format: str = Query("csv"),
+):
+    """Export the portfolio + full transaction history.
+
+    Defaults to CSV (one section for holdings, one for transactions) so a user
+    can keep their data across a container reset. ``format=json`` returns the
+    same data as the live portfolio response plus the raw transaction log.
+    """
+    import csv
+    import io
+
+    resp = _portfolio_response(user["username"], portfolio)
+    if format == "json":
+        return resp
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["section", "portfolio", portfolio])
+    writer.writerow([])
+    writer.writerow(["holding", "coin_id", "symbol", "amount", "avg_buy_price", "value", "pnl"])
+    for h in resp["holdings"]:
+        writer.writerow(
+            [
+                "holding",
+                h["coin_id"],
+                h["symbol"],
+                h["amount"],
+                h["avg_buy_price"],
+                h["value"],
+                h["pnl"],
+            ]
+        )
+    writer.writerow([])
+    writer.writerow(
+        ["transaction", "id", "type", "coin_id", "amount", "price", "total", "timestamp"]
+    )
+    for t in resp["transactions"]:
+        writer.writerow(
+            [
+                "transaction",
+                t.get("id"),
+                t.get("type"),
+                t.get("coin_id"),
+                t.get("amount"),
+                t.get("price"),
+                t.get("total"),
+                t.get("timestamp"),
+            ]
+        )
+    filename = f"portfolio_{user['username']}_{portfolio}.csv"
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @app.post("/api/portfolio/buy")
-def api_portfolio_buy(body: dict, user: dict = Depends(get_current_user)):
-    coin_id = body.get("coin_id")
-    usd_amount = float(body.get("usd_amount", 0))
-    pf_name = body.get("portfolio", "default")
+def api_portfolio_buy(body: TradeRequest, user: dict = Depends(get_current_user)):
+    coin_id = body.coin_id
+    usd_amount = body.usd_amount
+    pf_name = body.portfolio
     if usd_amount < 1:
         raise HTTPException(400, "Minimum trade is $1")
     price = get_coin_price(coin_id)
@@ -648,14 +818,14 @@ def api_portfolio_buy(body: dict, user: dict = Depends(get_current_user)):
         }
     )
     save_portfolio(user["username"], pf, pf_name)
-    return _portfolio_response(user["username"], pf_name)
+    return _write_response(user["username"], pf_name)
 
 
 @app.post("/api/portfolio/sell")
-def api_portfolio_sell(body: dict, user: dict = Depends(get_current_user)):
-    coin_id = body.get("coin_id")
-    usd_amount = float(body.get("usd_amount", 0))
-    pf_name = body.get("portfolio", "default")
+def api_portfolio_sell(body: TradeRequest, user: dict = Depends(get_current_user)):
+    coin_id = body.coin_id
+    usd_amount = body.usd_amount
+    pf_name = body.portfolio
     if usd_amount < 1:
         raise HTTPException(400, "Minimum trade is $1")
     price = get_coin_price(coin_id)
@@ -684,7 +854,7 @@ def api_portfolio_sell(body: dict, user: dict = Depends(get_current_user)):
         }
     )
     save_portfolio(user["username"], pf, pf_name)
-    return _portfolio_response(user["username"], pf_name)
+    return _write_response(user["username"], pf_name)
 
 
 @app.post("/api/portfolio/reset")
@@ -693,13 +863,13 @@ def api_portfolio_reset(
     portfolio: str = Query("default"),
 ):
     reset_portfolio(user["username"], portfolio)
-    return _portfolio_response(user["username"], portfolio)
+    return _write_response(user["username"], portfolio)
 
 
 @app.post("/api/portfolio/deposit")
-def api_portfolio_deposit(body: dict, user: dict = Depends(get_current_user)):
-    amount = float(body.get("amount", 0))
-    pf_name = body.get("portfolio", "default")
+def api_portfolio_deposit(body: FundsRequest, user: dict = Depends(get_current_user)):
+    amount = body.amount
+    pf_name = body.portfolio
     if amount <= 0:
         raise HTTPException(400, "Amount must be positive")
     pf = load_portfolio(user["username"], pf_name)
@@ -714,13 +884,13 @@ def api_portfolio_deposit(body: dict, user: dict = Depends(get_current_user)):
         }
     )
     save_portfolio(user["username"], pf, pf_name)
-    return _portfolio_response(user["username"], pf_name)
+    return _write_response(user["username"], pf_name)
 
 
 @app.post("/api/portfolio/withdraw")
-def api_portfolio_withdraw(body: dict, user: dict = Depends(get_current_user)):
-    amount = float(body.get("amount", 0))
-    pf_name = body.get("portfolio", "default")
+def api_portfolio_withdraw(body: FundsRequest, user: dict = Depends(get_current_user)):
+    amount = body.amount
+    pf_name = body.portfolio
     if amount <= 0:
         raise HTTPException(400, "Amount must be positive")
     pf = load_portfolio(user["username"], pf_name)
@@ -737,7 +907,7 @@ def api_portfolio_withdraw(body: dict, user: dict = Depends(get_current_user)):
         }
     )
     save_portfolio(user["username"], pf, pf_name)
-    return _portfolio_response(user["username"], pf_name)
+    return _write_response(user["username"], pf_name)
 
 
 @app.get("/api/portfolio/recommendation")

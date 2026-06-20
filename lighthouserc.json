@@ -1,0 +1,23 @@
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "python3 -m http.server 8000 --directory frontend",
+      "startServerReadyPattern": "Serving HTTP",
+      "startServerReadyTimeout": 20000,
+      "url": ["http://127.0.0.1:8000/index.html"],
+      "numberOfRuns": 1,
+      "settings": {
+        "onlyCategories": ["accessibility"],
+        "chromeFlags": "--no-sandbox --headless"
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:accessibility": ["error", { "minScore": 0.9 }]
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

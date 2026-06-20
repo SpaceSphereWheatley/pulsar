@@ -6,8 +6,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[2]
 INDEX = ROOT / "frontend" / "index.html"
 
@@ -15,7 +13,6 @@ INDEX = ROOT / "frontend" / "index.html"
 # ── G16 — not-financial-advice disclaimer is visible in the UI ────────────────
 
 
-@pytest.mark.xfail(reason="G16: no not-financial-advice disclaimer in the UI", strict=False)
 def test_frontend_has_not_financial_advice_disclaimer():
     html = INDEX.read_text().lower()
     assert "not financial advice" in html or "educational" in html
@@ -24,7 +21,6 @@ def test_frontend_has_not_financial_advice_disclaimer():
 # ── G8 (UI) — the ML score is labeled experimental wherever shown ─────────────
 
 
-@pytest.mark.xfail(reason="G8: ML score is not labeled 'experimental' in the UI", strict=False)
 def test_frontend_labels_ml_experimental():
     html = INDEX.read_text().lower()
     assert "experimental" in html
@@ -50,9 +46,6 @@ def test_frontend_interactive_controls_have_accessible_names():
         assert inner.strip() != "" or "aria-label" in inner
 
 
-@pytest.mark.xfail(
-    reason="G15: Lighthouse/axe accessibility audit (>=90) not wired into CI", strict=False
-)
 def test_accessibility_audit_is_enforced():
     """G15: a Lighthouse/axe accessibility gate (>=90) must run in CI."""
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text().lower()
@@ -62,6 +55,5 @@ def test_accessibility_audit_is_enforced():
 # ── G11 — one-command, cross-platform run ─────────────────────────────────────
 
 
-@pytest.mark.xfail(reason="G11: no Dockerfile / Makefile for cross-platform run", strict=False)
 def test_cross_platform_run_artifact_exists():
     assert (ROOT / "Dockerfile").exists() or (ROOT / "Makefile").exists()

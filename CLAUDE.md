@@ -42,6 +42,7 @@ Copy `.env.example` to `.env` in the repo root before running. Key vars:
 | `PULSAR_TOKEN_EXPIRE_MINUTES` | `60` | JWT lifetime |
 | `COINGECKO_API_KEY` | _(none)_ | **Required** for OHLC, signals, backtesting, and ML. Get a free Demo key at coingecko.com/en/api/pricing |
 | `COINGECKO_PRO_API_KEY` | _(none)_ | Use instead for paid CoinGecko Pro plans |
+| `PULSAR_CORS_ORIGINS` | `http://localhost:8000,http://localhost:8001` | Comma-separated allowed CORS origins (no wildcard) |
 
 ## Repository layout
 
