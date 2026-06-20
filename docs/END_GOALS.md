@@ -50,7 +50,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
   - `pytest` exits 0 with **0 failures and 0 errors** on a clean `pip install -r requirements.txt -r requirements-dev.txt`.
   - Coverage **≥ 80%** overall (raise CI's `--cov-fail-under` from 70 → 80).
   - `data.py` refresh/fetch paths have at least **one test each** for the failure branch (API throws → cache untouched, no crash).
-- **Status:** `[~]` 167 pass today, but coverage gate is 70% and `data.py` failure paths are thin.
+- **Status:** `[x]` CI gate raised to 80% (actual coverage ~92%); `data.py` refresh/fetch failure branches are tested.
 
 ### G2 — Documentation matches the code (zero drift)
 - **Why (Programmer):** Drifted docs are worse than none — they actively mislead.
@@ -186,7 +186,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
 
 PULSAR is **done** when every box below is checked:
 
-- [ ] **G1** Tests: 0 failures/errors, coverage ≥ 80%, `data.py` failure paths tested
+- [x] **G1** Tests: 0 failures/errors, coverage ≥ 80%, `data.py` failure paths tested
 - [x] **G2** Docs: 0 contradictions with `HEAD` (5 named drifts fixed)
 - [x] **G3** Insecure defaults warn loudly at startup (tested)
 - [x] **G4** Atomic writes + money-conservation invariant test + UI export

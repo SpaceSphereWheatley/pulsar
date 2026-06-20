@@ -74,7 +74,6 @@ def test_refresh_feargreed_survives_api_failure(monkeypatch):
     assert data._feargreed_cache == prev  # last-good preserved
 
 
-@pytest.mark.xfail(reason="G1: raise CI coverage gate from 70% to 80%", strict=False)
 def test_coverage_gate_is_at_least_80_percent():
     """G1: CI must enforce >= 80% coverage."""
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
