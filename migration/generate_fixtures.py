@@ -34,6 +34,7 @@ sys.path.insert(0, str(ROOT / "server"))
 import backtest  # noqa: E402
 import indicators  # noqa: E402
 import ml  # noqa: E402
+import recommendation  # noqa: E402
 
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures"
 
@@ -198,6 +199,118 @@ def _ml_capture(coin_id: str, ohlc: list) -> dict:
     }
 
 
+# ── Recommendation scenarios ──────────────────────────────────────────────────
+# Each scenario exercises specific branches of recommendation.recommend(). The
+# coins_cache / signals / portfolio shapes match what main.py passes at runtime.
+
+_COINS = {
+    "bitcoin": {"symbol": "btc", "name": "Bitcoin", "current_price": 60_000.0},
+    "ethereum": {"symbol": "eth", "name": "Ethereum", "current_price": 3_000.0},
+    "solana": {"symbol": "sol", "name": "Solana", "current_price": 150.0},
+    "cardano": {"symbol": "ada", "name": "Cardano", "current_price": 0.5},
+}
+
+
+def _total_value(portfolio: dict) -> float:
+    total = portfolio["cash"]
+    for cid, h in portfolio["holdings"].items():
+        price = _COINS.get(cid, {}).get("current_price") or h["avg_buy_price"]
+        total += h["amount"] * price
+    return total
+
+
+def _rec_scenarios() -> dict:
+    scenarios = {}
+
+    # 1. No holdings, cash, with two strong buy opportunities (>=70).
+    scenarios["empty_with_opportunities"] = {
+        "portfolio": {"cash": 10_000.0, "holdings": {}, "total_deposited": 10_000.0, "total_withdrawn": 0.0},
+        "signals": {"bitcoin": {"composite_score": 82}, "ethereum": {"composite_score": 74}, "solana": {"composite_score": 40}},
+    }
+
+    # 2. No holdings, quiet signals (none >=70).
+    scenarios["empty_quiet"] = {
+        "portfolio": {"cash": 10_000.0, "holdings": {}, "total_deposited": 10_000.0, "total_withdrawn": 0.0},
+        "signals": {"bitcoin": {"composite_score": 55}, "ethereum": {"composite_score": 48}},
+    }
+
+    # 3. Held, bearish signal, in profit → sell (take profits). Also a separate
+    #    held coin that's a strong add (>=60 with room) → buy. Mixed summary.
+    scenarios["profit_sell_and_add"] = {
+        "portfolio": {
+            "cash": 5_000.0,
+            "holdings": {
+                "bitcoin": {"amount": 0.1, "avg_buy_price": 50_000.0},  # +20%, comp 30 → sell
+                "ethereum": {"amount": 0.5, "avg_buy_price": 2_800.0},  # comp 65 → add
+            },
+            "total_deposited": 9_000.0,
+            "total_withdrawn": 0.0,
+        },
+        "signals": {"bitcoin": {"composite_score": 30}, "ethereum": {"composite_score": 65}},
+    }
+
+    # 4. Held, bearish signal, deep loss → sell (cut losses). Down portfolio.
+    scenarios["loss_sell"] = {
+        "portfolio": {
+            "cash": 1_000.0,
+            "holdings": {"solana": {"amount": 50.0, "avg_buy_price": 200.0}},  # -25%, comp 20 → sell
+            "total_deposited": 11_000.0,
+            "total_withdrawn": 0.0,
+        },
+        "signals": {"solana": {"composite_score": 20}},
+    }
+
+    # 5. Held, weak signal but near breakeven → hold. Down portfolio, no sell.
+    scenarios["weak_hold_breakeven"] = {
+        "portfolio": {
+            "cash": 500.0,
+            "holdings": {"cardano": {"amount": 1_000.0, "avg_buy_price": 0.51}},  # ~-2%, comp 32 → hold
+            "total_deposited": 1_100.0,
+            "total_withdrawn": 0.0,
+        },
+        "signals": {"cardano": {"composite_score": 32}},
+    }
+
+    # 6. Held, strong signal but low cash → hold (no room to add).
+    scenarios["strong_but_low_cash"] = {
+        "portfolio": {
+            "cash": 5.0,
+            "holdings": {"bitcoin": {"amount": 0.05, "avg_buy_price": 55_000.0}},  # comp 70, cash<$10 → hold
+            "total_deposited": 2_800.0,
+            "total_withdrawn": 0.0,
+        },
+        "signals": {"bitcoin": {"composite_score": 70}},
+    }
+
+    # 7. Held, mixed signal (35–60) → hold. Up portfolio, all hold.
+    scenarios["mixed_hold"] = {
+        "portfolio": {
+            "cash": 2_000.0,
+            "holdings": {"ethereum": {"amount": 1.0, "avg_buy_price": 2_500.0}},  # +20%, comp 50 → hold
+            "total_deposited": 4_000.0,
+            "total_withdrawn": 0.0,
+        },
+        "signals": {"ethereum": {"composite_score": 50}},
+    }
+
+    return scenarios
+
+
+def _rec_capture() -> dict:
+    out = {}
+    for name, sc in _rec_scenarios().items():
+        tv = _total_value(sc["portfolio"])
+        result = recommendation.recommend(sc["portfolio"], _COINS, sc["signals"], tv)
+        out[name] = {
+            "portfolio": sc["portfolio"],
+            "coins_cache": _COINS,
+            "signals": sc["signals"],
+            "total_value": tv,
+            "result": result,
+        }
+    return out
+
+
 def main() -> None:
     FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
     datasets = _build_datasets()
@@ -233,6 +346,12 @@ def main() -> None:
     (FIXTURE_DIR / "backtest.json").write_text(
         json.dumps(backtest_out, indent=2, allow_nan=False)
     )
+
+    rec_out = _rec_capture()
+    (FIXTURE_DIR / "recommendation.json").write_text(
+        json.dumps(rec_out, indent=2, allow_nan=False)
+    )
+    print(f"Wrote {len(rec_out)} recommendation scenarios")
 
     print(f"Wrote {len(datasets)} datasets to {FIXTURE_DIR}/")
     for name in datasets:

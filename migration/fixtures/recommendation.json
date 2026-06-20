@@ -1,0 +1,440 @@
+{
+  "empty_with_opportunities": {
+    "portfolio": {
+      "cash": 10000.0,
+      "holdings": {},
+      "total_deposited": 10000.0,
+      "total_withdrawn": 0.0
+    },
+    "coins_cache": {
+      "bitcoin": {
+        "symbol": "btc",
+        "name": "Bitcoin",
+        "current_price": 60000.0
+      },
+      "ethereum": {
+        "symbol": "eth",
+        "name": "Ethereum",
+        "current_price": 3000.0
+      },
+      "solana": {
+        "symbol": "sol",
+        "name": "Solana",
+        "current_price": 150.0
+      },
+      "cardano": {
+        "symbol": "ada",
+        "name": "Cardano",
+        "current_price": 0.5
+      }
+    },
+    "signals": {
+      "bitcoin": {
+        "composite_score": 82
+      },
+      "ethereum": {
+        "composite_score": 74
+      },
+      "solana": {
+        "composite_score": 40
+      }
+    },
+    "total_value": 10000.0,
+    "result": {
+      "summary": "You're holding $10,000 in cash. There are 2 buy signals worth looking at.",
+      "recommendations": [
+        {
+          "coin_id": "bitcoin",
+          "symbol": "BTC",
+          "name": "Bitcoin",
+          "action": "buy",
+          "plain": "Bitcoin is showing a strong buy signal and you don't own any. Worth considering a small position.",
+          "detail": "Signal score 82/100. Starting with $800 would be about 8% of your portfolio \u2014 low risk to try.",
+          "suggested_usd": 800.0,
+          "current_value": 0.0,
+          "pnl_pct": 0.0,
+          "position_pct": 0.0,
+          "composite_score": 82
+        },
+        {
+          "coin_id": "ethereum",
+          "symbol": "ETH",
+          "name": "Ethereum",
+          "action": "buy",
+          "plain": "Ethereum is showing a strong buy signal and you don't own any. Worth considering a small position.",
+          "detail": "Signal score 74/100. Starting with $800 would be about 8% of your portfolio \u2014 low risk to try.",
+          "suggested_usd": 800.0,
+          "current_value": 0.0,
+          "pnl_pct": 0.0,
+          "position_pct": 0.0,
+          "composite_score": 74
+        }
+      ],
+      "cash_pct": 100.0
+    }
+  },
+  "empty_quiet": {
+    "portfolio": {
+      "cash": 10000.0,
+      "holdings": {},
+      "total_deposited": 10000.0,
+      "total_withdrawn": 0.0
+    },
+    "coins_cache": {
+      "bitcoin": {
+        "symbol": "btc",
+        "name": "Bitcoin",
+        "current_price": 60000.0
+      },
+      "ethereum": {
+        "symbol": "eth",
+        "name": "Ethereum",
+        "current_price": 3000.0
+      },
+      "solana": {
+        "symbol": "sol",
+        "name": "Solana",
+        "current_price": 150.0
+      },
+      "cardano": {
+        "symbol": "ada",
+        "name": "Cardano",
+        "current_price": 0.5
+      }
+    },
+    "signals": {
+      "bitcoin": {
+        "composite_score": 55
+      },
+      "ethereum": {
+        "composite_score": 48
+      }
+    },
+    "total_value": 10000.0,
+    "result": {
+      "summary": "You have $10,000 in cash. Signals are quiet right now \u2014 no rush to deploy.",
+      "recommendations": [],
+      "cash_pct": 100.0
+    }
+  },
+  "profit_sell_and_add": {
+    "portfolio": {
+      "cash": 5000.0,
+      "holdings": {
+        "bitcoin": {
+          "amount": 0.1,
+          "avg_buy_price": 50000.0
+        },
+        "ethereum": {
+          "amount": 0.5,
+          "avg_buy_price": 2800.0
+        }
+      },
+      "total_deposited": 9000.0,
+      "total_withdrawn": 0.0
+    },
+    "coins_cache": {
+      "bitcoin": {
+        "symbol": "btc",
+        "name": "Bitcoin",
+        "current_price": 60000.0
+      },
+      "ethereum": {
+        "symbol": "eth",
+        "name": "Ethereum",
+        "current_price": 3000.0
+      },
+      "solana": {
+        "symbol": "sol",
+        "name": "Solana",
+        "current_price": 150.0
+      },
+      "cardano": {
+        "symbol": "ada",
+        "name": "Cardano",
+        "current_price": 0.5
+      }
+    },
+    "signals": {
+      "bitcoin": {
+        "composite_score": 30
+      },
+      "ethereum": {
+        "composite_score": 65
+      }
+    },
+    "total_value": 12500.0,
+    "result": {
+      "summary": "Portfolio is up 38.9%. 1 position to add to, 1 to trim.",
+      "recommendations": [
+        {
+          "coin_id": "bitcoin",
+          "symbol": "BTC",
+          "name": "Bitcoin",
+          "action": "sell",
+          "plain": "Consider taking some BTC profits \u2014 you're up 20.0% and the signal has turned bearish.",
+          "detail": "Selling around $3,000 (half your position) locks in gains. You can always buy back lower.",
+          "suggested_usd": 3000.0,
+          "current_value": 6000.0,
+          "pnl_pct": 20.0,
+          "position_pct": 48.0,
+          "composite_score": 30
+        },
+        {
+          "coin_id": "ethereum",
+          "symbol": "ETH",
+          "name": "Ethereum",
+          "action": "buy",
+          "plain": "Ethereum is looking strong. Adding about $1,000 makes sense here.",
+          "detail": "Signal score is 65/100. That would bring ETH to roughly 20% of your portfolio \u2014 a healthy allocation.",
+          "suggested_usd": 1000.0,
+          "current_value": 1500.0,
+          "pnl_pct": 7.14,
+          "position_pct": 12.0,
+          "composite_score": 65
+        }
+      ],
+      "cash_pct": 40.0
+    }
+  },
+  "loss_sell": {
+    "portfolio": {
+      "cash": 1000.0,
+      "holdings": {
+        "solana": {
+          "amount": 50.0,
+          "avg_buy_price": 200.0
+        }
+      },
+      "total_deposited": 11000.0,
+      "total_withdrawn": 0.0
+    },
+    "coins_cache": {
+      "bitcoin": {
+        "symbol": "btc",
+        "name": "Bitcoin",
+        "current_price": 60000.0
+      },
+      "ethereum": {
+        "symbol": "eth",
+        "name": "Ethereum",
+        "current_price": 3000.0
+      },
+      "solana": {
+        "symbol": "sol",
+        "name": "Solana",
+        "current_price": 150.0
+      },
+      "cardano": {
+        "symbol": "ada",
+        "name": "Cardano",
+        "current_price": 0.5
+      }
+    },
+    "signals": {
+      "solana": {
+        "composite_score": 20
+      }
+    },
+    "total_value": 8500.0,
+    "result": {
+      "summary": "Portfolio is down 22.7%. Cutting the flagged position could stop further losses.",
+      "recommendations": [
+        {
+          "coin_id": "solana",
+          "symbol": "SOL",
+          "name": "Solana",
+          "action": "sell",
+          "plain": "SOL is down 25.0% and still signalling weakness. Reducing your position limits further losses.",
+          "detail": "Selling $3,750 cuts your exposure in half. The signal score is 20/100 \u2014 not a good outlook.",
+          "suggested_usd": 3750.0,
+          "current_value": 7500.0,
+          "pnl_pct": -25.0,
+          "position_pct": 88.2,
+          "composite_score": 20
+        }
+      ],
+      "cash_pct": 11.8
+    }
+  },
+  "weak_hold_breakeven": {
+    "portfolio": {
+      "cash": 500.0,
+      "holdings": {
+        "cardano": {
+          "amount": 1000.0,
+          "avg_buy_price": 0.51
+        }
+      },
+      "total_deposited": 1100.0,
+      "total_withdrawn": 0.0
+    },
+    "coins_cache": {
+      "bitcoin": {
+        "symbol": "btc",
+        "name": "Bitcoin",
+        "current_price": 60000.0
+      },
+      "ethereum": {
+        "symbol": "eth",
+        "name": "Ethereum",
+        "current_price": 3000.0
+      },
+      "solana": {
+        "symbol": "sol",
+        "name": "Solana",
+        "current_price": 150.0
+      },
+      "cardano": {
+        "symbol": "ada",
+        "name": "Cardano",
+        "current_price": 0.5
+      }
+    },
+    "signals": {
+      "cardano": {
+        "composite_score": 32
+      }
+    },
+    "total_value": 1000.0,
+    "result": {
+      "summary": "Portfolio is down 9.1%, but signals suggest holding. Markets recover \u2014 no panic selling needed.",
+      "recommendations": [
+        {
+          "coin_id": "cardano",
+          "symbol": "ADA",
+          "name": "Cardano",
+          "action": "hold",
+          "plain": "Hold your ADA. The signal is weak but you're near breakeven \u2014 no urgency to sell.",
+          "detail": "Signal score is 32/100. Wait for a clearer direction before acting.",
+          "suggested_usd": null,
+          "current_value": 500.0,
+          "pnl_pct": -1.96,
+          "position_pct": 50.0,
+          "composite_score": 32
+        }
+      ],
+      "cash_pct": 50.0
+    }
+  },
+  "strong_but_low_cash": {
+    "portfolio": {
+      "cash": 5.0,
+      "holdings": {
+        "bitcoin": {
+          "amount": 0.05,
+          "avg_buy_price": 55000.0
+        }
+      },
+      "total_deposited": 2800.0,
+      "total_withdrawn": 0.0
+    },
+    "coins_cache": {
+      "bitcoin": {
+        "symbol": "btc",
+        "name": "Bitcoin",
+        "current_price": 60000.0
+      },
+      "ethereum": {
+        "symbol": "eth",
+        "name": "Ethereum",
+        "current_price": 3000.0
+      },
+      "solana": {
+        "symbol": "sol",
+        "name": "Solana",
+        "current_price": 150.0
+      },
+      "cardano": {
+        "symbol": "ada",
+        "name": "Cardano",
+        "current_price": 0.5
+      }
+    },
+    "signals": {
+      "bitcoin": {
+        "composite_score": 70
+      }
+    },
+    "total_value": 3005.0,
+    "result": {
+      "summary": "Portfolio is up 7.3% and all signals say hold. Nothing to do right now.",
+      "recommendations": [
+        {
+          "coin_id": "bitcoin",
+          "symbol": "BTC",
+          "name": "Bitcoin",
+          "action": "hold",
+          "plain": "Bitcoin looks good but you're low on cash. Hold what you have.",
+          "detail": "Signal score is 70/100, but you only have $5.00 free. No room to add right now.",
+          "suggested_usd": null,
+          "current_value": 3000.0,
+          "pnl_pct": 9.09,
+          "position_pct": 99.8,
+          "composite_score": 70
+        }
+      ],
+      "cash_pct": 0.2
+    }
+  },
+  "mixed_hold": {
+    "portfolio": {
+      "cash": 2000.0,
+      "holdings": {
+        "ethereum": {
+          "amount": 1.0,
+          "avg_buy_price": 2500.0
+        }
+      },
+      "total_deposited": 4000.0,
+      "total_withdrawn": 0.0
+    },
+    "coins_cache": {
+      "bitcoin": {
+        "symbol": "btc",
+        "name": "Bitcoin",
+        "current_price": 60000.0
+      },
+      "ethereum": {
+        "symbol": "eth",
+        "name": "Ethereum",
+        "current_price": 3000.0
+      },
+      "solana": {
+        "symbol": "sol",
+        "name": "Solana",
+        "current_price": 150.0
+      },
+      "cardano": {
+        "symbol": "ada",
+        "name": "Cardano",
+        "current_price": 0.5
+      }
+    },
+    "signals": {
+      "ethereum": {
+        "composite_score": 50
+      }
+    },
+    "total_value": 5000.0,
+    "result": {
+      "summary": "Portfolio is up 25.0% and all signals say hold. Nothing to do right now.",
+      "recommendations": [
+        {
+          "coin_id": "ethereum",
+          "symbol": "ETH",
+          "name": "Ethereum",
+          "action": "hold",
+          "plain": "Hold your ETH \u2014 signals are mixed and there's no clear reason to buy or sell.",
+          "detail": "Signal score is 50/100. The market is undecided on Ethereum.",
+          "suggested_usd": null,
+          "current_value": 3000.0,
+          "pnl_pct": 20.0,
+          "position_pct": 60.0,
+          "composite_score": 50
+        }
+      ],
+      "cash_pct": 40.0
+    }
+  }
+}
