@@ -1,13 +1,14 @@
 {
   "ci": {
     "collect": {
-      "startServerCommand": "uvicorn server.main:app --host 127.0.0.1 --port 8000",
-      "startServerReadyPattern": "Uvicorn running on",
-      "startServerReadyTimeout": 30000,
-      "url": ["http://127.0.0.1:8000/"],
+      "startServerCommand": "python3 -m http.server 8000 --directory frontend",
+      "startServerReadyPattern": "Serving HTTP",
+      "startServerReadyTimeout": 20000,
+      "url": ["http://127.0.0.1:8000/index.html"],
       "numberOfRuns": 1,
       "settings": {
-        "onlyCategories": ["accessibility"]
+        "onlyCategories": ["accessibility"],
+        "chromeFlags": "--no-sandbox --headless"
       }
     },
     "assert": {

@@ -39,9 +39,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      # The accessibility audit only needs the served HTML, so we serve the
+      # static frontend (python http.server) rather than booting the full app
+      # — deterministic and free of network/startup timing.
       - name: Run Lighthouse CI (fails if Accessibility < 0.90)
         uses: treosh/lighthouse-ci-action@v12
         with:
