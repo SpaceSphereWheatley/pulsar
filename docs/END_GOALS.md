@@ -103,7 +103,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
     with backoff**; a forced failure in tests leaves the last-good cache served and logs once.
   - A `GET /api/health` endpoint reports per-cache freshness (age in seconds) and
     overall `ok|degraded`. Covered by a test.
-- **Status:** `[ ]` try/except exists; no retry, no health endpoint.
+- **Status:** `[x]` all fetches go through bounded retry + exponential backoff; `GET /api/health` reports per-cache age and ok|degraded.
 
 ### G7 — Request bodies are validated, not trusted
 - **Why (Programmer):** `body: dict` + `float(body.get(...))` invites 500s on bad input.
@@ -191,7 +191,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G3** Insecure defaults warn loudly at startup (tested)
 - [x] **G4** Atomic writes + money-conservation invariant test + UI export
 - [ ] **G5** Friendly empty-state + no 500s when OHLC absent (tested)
-- [ ] **G6** Retry/backoff on all fetches + `/api/health` (tested)
+- [x] **G6** Retry/backoff on all fetches + `/api/health` (tested)
 - [ ] **G7** Pydantic validation on every POST → 422 not 500 (tested)
 - [ ] **G8** ML scores persist, expose a quality metric, labeled experimental
 - [ ] **G9** Caches persist and load on boot (no-network boot test)

@@ -14,7 +14,6 @@ SERVER = Path(__file__).resolve().parents[1]
 # ── G6 — health endpoint + retry/backoff on outbound fetches ──────────────────
 
 
-@pytest.mark.xfail(reason="G6: no /api/health endpoint yet", strict=False)
 def test_health_endpoint_reports_cache_freshness(client):
     """G6: /api/health reports per-cache age and an overall ok|degraded status."""
     r = client.get("/api/health")
@@ -24,7 +23,6 @@ def test_health_endpoint_reports_cache_freshness(client):
     assert "caches" in body
 
 
-@pytest.mark.xfail(reason="G6: outbound fetches have no retry/backoff", strict=False)
 def test_fetches_use_retry_with_backoff():
     """G6: data fetching must retry transient failures with backoff."""
     src = (SERVER / "data.py").read_text().lower()

@@ -21,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from auth import create_token, decode_token, warn_insecure_defaults
 from backtest import run_backtest
 from data import (
+    cache_ages,
     get_coin_price,
     get_coins_cache,
     get_feargreed_cache,
@@ -406,6 +407,15 @@ def api_delete_user(username: str, admin: dict = Depends(require_admin)):
 
 
 # ── Public market routes ──────────────────────────────────────────────────────
+
+
+@app.get("/api/health")
+def api_health():
+    """Liveness + per-cache freshness. status is 'degraded' if the core coins
+    cache is empty (no market data to serve), otherwise 'ok'."""
+    caches = cache_ages()
+    status = "ok" if caches["coins"]["count"] else "degraded"
+    return {"status": status, "caches": caches}
 
 
 @app.get("/api/coins")

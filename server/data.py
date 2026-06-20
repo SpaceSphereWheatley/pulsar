@@ -1,12 +1,64 @@
+import asyncio
+import logging
 import os
 import time
-import logging
 from typing import Optional
 
 import httpx
 from pycoingecko import CoinGeckoAPI
 
 logger = logging.getLogger(__name__)
+
+# ── Outbound resilience ───────────────────────────────────────────────────────
+# Every outbound fetch goes through bounded retry with exponential backoff so a
+# transient flake/rate-limit doesn't wipe the last-good cache.
+_RETRY_ATTEMPTS = 3
+_RETRY_BASE_DELAY = 0.5  # seconds; doubled after each failed attempt
+
+
+def _with_retry(fn, *args, **kwargs):
+    """Call a sync fetch with bounded retry + exponential backoff; re-raise last error."""
+    delay = _RETRY_BASE_DELAY
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, _RETRY_ATTEMPTS + 1):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as exc:  # noqa: BLE001 - retry any transient failure
+            last_exc = exc
+            if attempt < _RETRY_ATTEMPTS:
+                logger.warning(
+                    "fetch attempt %d/%d failed: %s; backing off %.1fs",
+                    attempt,
+                    _RETRY_ATTEMPTS,
+                    exc,
+                    delay,
+                )
+                time.sleep(delay)
+                delay *= 2
+    raise last_exc  # type: ignore[misc]
+
+
+async def _with_retry_async(coro_fn, *args, **kwargs):
+    """Call an async fetch with bounded retry + exponential backoff; re-raise last error."""
+    delay = _RETRY_BASE_DELAY
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, _RETRY_ATTEMPTS + 1):
+        try:
+            return await coro_fn(*args, **kwargs)
+        except Exception as exc:  # noqa: BLE001 - retry any transient failure
+            last_exc = exc
+            if attempt < _RETRY_ATTEMPTS:
+                logger.warning(
+                    "fetch attempt %d/%d failed: %s; backing off %.1fs",
+                    attempt,
+                    _RETRY_ATTEMPTS,
+                    exc,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                delay *= 2
+    raise last_exc  # type: ignore[misc]
+
 
 _demo_key = os.environ.get("COINGECKO_API_KEY", "")
 _pro_key = os.environ.get("COINGECKO_PRO_API_KEY", "")
@@ -55,7 +107,7 @@ def _fetch_coins_raw() -> list[dict]:
 def refresh_coins() -> None:
     global _coins_cache, _coins_cache_ts
     try:
-        raw = _fetch_coins_raw()
+        raw = _with_retry(_fetch_coins_raw)
         _coins_cache = {coin["id"]: coin for coin in raw}
         _coins_cache_ts = time.time()
         logger.info("Coins cache refreshed (%d coins)", len(_coins_cache))
@@ -90,7 +142,7 @@ def _fetch_ohlc_raw(coin_id: str, days: int = 14) -> list:
 
 def refresh_ohlc(coin_id: str) -> None:
     try:
-        raw = _fetch_ohlc_raw(coin_id)
+        raw = _with_retry(_fetch_ohlc_raw, coin_id)
         _ohlc_cache[coin_id] = {"data": raw, "ts": time.time()}
         logger.info("OHLC cache refreshed for %s (%d candles)", coin_id, len(raw))
     except Exception as exc:
@@ -114,15 +166,19 @@ def refresh_all_ohlc() -> None:
 # ── Fear & Greed ─────────────────────────────────────────────────────────────
 
 
+async def _fetch_feargreed_raw() -> dict:
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get("https://api.alternative.me/fng/?limit=7")
+        resp.raise_for_status()
+        return resp.json()
+
+
 async def refresh_feargreed() -> None:
     global _feargreed_cache, _feargreed_cache_ts
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get("https://api.alternative.me/fng/?limit=7")
-            resp.raise_for_status()
-            _feargreed_cache = resp.json()
-            _feargreed_cache_ts = time.time()
-            logger.info("Fear & Greed cache refreshed")
+        _feargreed_cache = await _with_retry_async(_fetch_feargreed_raw)
+        _feargreed_cache_ts = time.time()
+        logger.info("Fear & Greed cache refreshed")
     except Exception as exc:
         logger.error("Failed to refresh Fear & Greed: %s", exc)
 
@@ -144,16 +200,20 @@ _nok_rate_ts: float = 0.0
 _NOK_TTL = 3600  # 1 hour
 
 
+async def _fetch_news_raw() -> dict:
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get("https://api.coingecko.com/api/v3/news")
+        resp.raise_for_status()
+        return resp.json()
+
+
 async def refresh_news() -> None:
     global _news_cache, _news_cache_ts
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get("https://api.coingecko.com/api/v3/news")
-            resp.raise_for_status()
-            payload = resp.json()
-            _news_cache = payload.get("data", [])[:20]
-            _news_cache_ts = time.time()
-            logger.info("News cache refreshed (%d items)", len(_news_cache))
+        payload = await _with_retry_async(_fetch_news_raw)
+        _news_cache = payload.get("data", [])[:20]
+        _news_cache_ts = time.time()
+        logger.info("News cache refreshed (%d items)", len(_news_cache))
     except Exception as exc:
         logger.error("Failed to refresh news: %s", exc)
 
@@ -162,15 +222,20 @@ def get_news_cache() -> tuple[list, float]:
     return _news_cache, _news_cache_ts
 
 
+async def _fetch_nok_raw() -> dict:
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get("https://api.frankfurter.app/latest?from=USD&to=NOK")
+        resp.raise_for_status()
+        return resp.json()
+
+
 async def refresh_nok_rate() -> None:
     global _nok_rate, _nok_rate_ts
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get("https://api.frankfurter.app/latest?from=USD&to=NOK")
-            resp.raise_for_status()
-            _nok_rate = float(resp.json()["rates"]["NOK"])
-            _nok_rate_ts = time.time()
-            logger.info("NOK rate refreshed: %.4f", _nok_rate)
+        payload = await _with_retry_async(_fetch_nok_raw)
+        _nok_rate = float(payload["rates"]["NOK"])
+        _nok_rate_ts = time.time()
+        logger.info("NOK rate refreshed: %.4f", _nok_rate)
     except Exception as exc:
         logger.error("Failed to refresh NOK rate: %s", exc)
 
@@ -180,6 +245,23 @@ def get_nok_rate() -> float:
 
 
 # ── Startup init ─────────────────────────────────────────────────────────────
+
+
+def cache_ages() -> dict:
+    """Per-cache freshness for /api/health: age in seconds (None if never filled)."""
+    now = time.time()
+
+    def age(ts: float) -> Optional[float]:
+        return round(now - ts, 1) if ts else None
+
+    ohlc_ts = max((e["ts"] for e in _ohlc_cache.values()), default=0.0)
+    return {
+        "coins": {"age_seconds": age(_coins_cache_ts), "count": len(_coins_cache)},
+        "ohlc": {"age_seconds": age(ohlc_ts), "count": len(_ohlc_cache)},
+        "feargreed": {"age_seconds": age(_feargreed_cache_ts)},
+        "news": {"age_seconds": age(_news_cache_ts), "count": len(_news_cache)},
+        "nok_rate": {"age_seconds": age(_nok_rate_ts)},
+    }
 
 
 def init_data() -> None:
