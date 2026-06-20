@@ -30,9 +30,11 @@ from data import (
     get_nok_rate,
     get_ohlc,
     init_data,
+    load_caches,
     refresh_feargreed,
     refresh_news,
     refresh_nok_rate,
+    save_caches,
 )
 from indicators import compute_indicators, compute_signal
 from ml import get_ml_quality, get_ml_score, load_scores
@@ -123,10 +125,12 @@ async def lifespan(app: FastAPI):
     warn_insecure_defaults()
     seed_admin()
     load_scores()
+    load_caches()
     init_data()
     await refresh_feargreed()
     await refresh_news()
     await refresh_nok_rate()
+    save_caches()
 
     import asyncio
 

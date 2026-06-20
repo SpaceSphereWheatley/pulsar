@@ -127,7 +127,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
 - **Measure:** OHLC/coins/F&G/news caches persist to `server/cache.json` (already
   gitignored) and are loaded on boot; first request after restart serves cached data
   with no external call. Asserted by a boot-without-network test.
-- **Status:** `[ ]`
+- **Status:** `[x]` `data.save_caches()`/`load_caches()` use `server/cache.json`; lifespan loads on boot and persists after warmup.
 
 ### G10 — A non-admin user can manage their own account
 - **Why (User):** "I was given a login; I want to change my password."
@@ -194,7 +194,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G6** Retry/backoff on all fetches + `/api/health` (tested)
 - [x] **G7** Pydantic validation on every POST → 422 not 500 (tested)
 - [x] **G8** ML scores persist, expose a quality metric, labeled experimental
-- [ ] **G9** Caches persist and load on boot (no-network boot test)
+- [x] **G9** Caches persist and load on boot (no-network boot test)
 - [x] **G10** Self-service password change (tested)
 - [ ] **G11** One-command cross-platform run (Docker/make)
 - [ ] **G12** CORS from env, no hard-coded `*`

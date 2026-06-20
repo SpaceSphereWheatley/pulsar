@@ -247,6 +247,70 @@ def get_nok_rate() -> float:
 # ── Startup init ─────────────────────────────────────────────────────────────
 
 
+_CACHE_FILE = os.path.join(os.path.dirname(__file__), "cache.json")
+
+
+def save_caches() -> None:
+    """Persist warm caches to server/cache.json so a cold start needs no network."""
+    import json
+    import tempfile
+
+    payload = {
+        "coins": _coins_cache,
+        "coins_ts": _coins_cache_ts,
+        "ohlc": _ohlc_cache,
+        "feargreed": _feargreed_cache,
+        "feargreed_ts": _feargreed_cache_ts,
+        "news": _news_cache,
+        "news_ts": _news_cache_ts,
+        "nok_rate": _nok_rate,
+        "nok_rate_ts": _nok_rate_ts,
+    }
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(_CACHE_FILE), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(json.dumps(payload))
+        os.replace(tmp, _CACHE_FILE)
+    except Exception:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
+def load_caches() -> None:
+    """Load persisted caches on boot. Only fills caches that are currently empty,
+    so a warm process is never clobbered by stale disk data."""
+    import json
+
+    global _coins_cache, _coins_cache_ts, _ohlc_cache
+    global _feargreed_cache, _feargreed_cache_ts
+    global _news_cache, _news_cache_ts, _nok_rate, _nok_rate_ts
+
+    if not os.path.exists(_CACHE_FILE):
+        return
+    try:
+        payload = json.loads(open(_CACHE_FILE).read())
+    except Exception as exc:
+        logger.warning("Could not load persisted caches: %s", exc)
+        return
+
+    if not _coins_cache and payload.get("coins"):
+        _coins_cache = payload["coins"]
+        _coins_cache_ts = payload.get("coins_ts", 0.0)
+    if not _ohlc_cache and payload.get("ohlc"):
+        _ohlc_cache = payload["ohlc"]
+    if not _feargreed_cache and payload.get("feargreed"):
+        _feargreed_cache = payload["feargreed"]
+        _feargreed_cache_ts = payload.get("feargreed_ts", 0.0)
+    if not _news_cache and payload.get("news"):
+        _news_cache = payload["news"]
+        _news_cache_ts = payload.get("news_ts", 0.0)
+    if not _nok_rate_ts and payload.get("nok_rate"):
+        _nok_rate = payload["nok_rate"]
+        _nok_rate_ts = payload.get("nok_rate_ts", 0.0)
+    logger.info("Loaded persisted caches from %s", _CACHE_FILE)
+
+
 def cache_ages() -> dict:
     """Per-cache freshness for /api/health: age in seconds (None if never filled)."""
     now = time.time()

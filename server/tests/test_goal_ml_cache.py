@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 import data
 import ml
 
@@ -36,13 +34,11 @@ def test_signals_expose_ml_quality_metric(client):
 # ── G9 — caches survive a cold start ──────────────────────────────────────────
 
 
-@pytest.mark.xfail(reason="G9: caches are not persisted to disk", strict=False)
 def test_cache_persistence_helpers_exist():
     """G9: caches must persist to cache.json and load on boot."""
     assert hasattr(data, "save_caches") and hasattr(data, "load_caches")
 
 
-@pytest.mark.xfail(reason="G9: no boot-from-cache path; cold start hits the API", strict=False)
 def test_boot_loads_cache_without_network(tmp_path, monkeypatch):
     """G9: after a restart, the first request serves cache with no external call."""
     monkeypatch.setattr(data, "_coins_cache", {})
