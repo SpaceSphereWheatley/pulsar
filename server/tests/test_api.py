@@ -471,7 +471,8 @@ def test_portfolio_history_requires_auth(client):
 
 
 def test_portfolio_history_returns_list(client, auth_headers):
-    client.get("/api/portfolio", headers=auth_headers)  # trigger snapshot
+    # A write (not a GET) records a snapshot — GET /api/portfolio is read-only (G13).
+    client.post("/api/portfolio/deposit", json={"amount": 100}, headers=auth_headers)
     body = client.get("/api/portfolio/history", headers=auth_headers).json()
     assert isinstance(body, list)
     assert len(body) >= 1

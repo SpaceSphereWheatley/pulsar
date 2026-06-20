@@ -158,7 +158,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
   `GET /api/portfolio`, mutating state during a read.
 - **Measure:** daily snapshotting moves to the scheduler (or a dedicated call);
   `GET /api/portfolio` is provably read-only (test asserts no file write on GET).
-- **Status:** `[ ]`
+- **Status:** `[x]` snapshotting moved to write paths + a daily scheduler job; GET is read-only.
 
 ### G14 — P&L summary uses the live capital model everywhere
 - **Why (Programmer):** `recommendation.py` still computes `total_pnl_pct` from a
@@ -198,7 +198,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G10** Self-service password change (tested)
 - [ ] **G11** One-command cross-platform run (Docker/make)
 - [ ] **G12** CORS from env, no hard-coded `*`
-- [ ] **G13** `GET /api/portfolio` is read-only (tested)
+- [x] **G13** `GET /api/portfolio` is read-only (tested)
 - [x] **G14** Recommendation P&L uses `net_invested` (tested)
 - [ ] **G15** Accessibility ≥ 90, no 375px horizontal scroll
 - [ ] **G16** Persistent not-financial-advice disclaimer in UI

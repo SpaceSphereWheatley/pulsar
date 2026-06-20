@@ -176,6 +176,13 @@ async def lifespan(app: FastAPI):
         id="refresh_nok_rate",
         replace_existing=True,
     )
+    scheduler.add_job(
+        _snapshot_all_portfolios,
+        "interval",
+        hours=24,
+        id="snapshot_portfolios",
+        replace_existing=True,
+    )
     scheduler.start()
     logger.info("Scheduler started")
     yield
@@ -391,8 +398,6 @@ def _portfolio_response(username: str, pf_name: str = "default") -> dict:
     total_pnl = total_value - net_invested
     total_pnl_pct = (total_pnl / net_invested * 100) if net_invested > 0 else 0.0
 
-    record_snapshot(username, total_value, portfolio["cash"], total_pnl_pct, pf_name)
-
     return {
         "portfolio_name": pf_name,
         "cash": round(portfolio["cash"], 2),
@@ -409,6 +414,31 @@ def _portfolio_response(username: str, pf_name: str = "default") -> dict:
         "nok_rate": round(nok_rate, 4),
         "transactions": list(reversed(portfolio["transactions"])),
     }
+
+
+def _write_response(username: str, pf_name: str = "default") -> dict:
+    """Build the portfolio response AND record a daily history snapshot.
+
+    Used by the write endpoints (buy/sell/deposit/withdraw/reset). GET stays
+    read-only — it calls _portfolio_response, which never touches disk.
+    """
+    resp = _portfolio_response(username, pf_name)
+    record_snapshot(username, resp["total_value"], resp["cash"], resp["total_pnl_pct"], pf_name)
+    return resp
+
+
+def _snapshot_all_portfolios() -> None:
+    """Daily scheduler job: record a value snapshot for every user's portfolios."""
+    for u in list_users():
+        username = u["username"]
+        for pf_name in list_portfolios(username):
+            try:
+                resp = _portfolio_response(username, pf_name)
+                record_snapshot(
+                    username, resp["total_value"], resp["cash"], resp["total_pnl_pct"], pf_name
+                )
+            except Exception as exc:  # noqa: BLE001 - one bad portfolio shouldn't stop the job
+                logger.warning("Snapshot failed for %s/%s: %s", username, pf_name, exc)
 
 
 # ── Auth routes ───────────────────────────────────────────────────────────────
@@ -778,7 +808,7 @@ def api_portfolio_buy(body: TradeRequest, user: dict = Depends(get_current_user)
         }
     )
     save_portfolio(user["username"], pf, pf_name)
-    return _portfolio_response(user["username"], pf_name)
+    return _write_response(user["username"], pf_name)
 
 
 @app.post("/api/portfolio/sell")
@@ -814,7 +844,7 @@ def api_portfolio_sell(body: TradeRequest, user: dict = Depends(get_current_user
         }
     )
     save_portfolio(user["username"], pf, pf_name)
-    return _portfolio_response(user["username"], pf_name)
+    return _write_response(user["username"], pf_name)
 
 
 @app.post("/api/portfolio/reset")
@@ -823,7 +853,7 @@ def api_portfolio_reset(
     portfolio: str = Query("default"),
 ):
     reset_portfolio(user["username"], portfolio)
-    return _portfolio_response(user["username"], portfolio)
+    return _write_response(user["username"], portfolio)
 
 
 @app.post("/api/portfolio/deposit")
@@ -844,7 +874,7 @@ def api_portfolio_deposit(body: FundsRequest, user: dict = Depends(get_current_u
         }
     )
     save_portfolio(user["username"], pf, pf_name)
-    return _portfolio_response(user["username"], pf_name)
+    return _write_response(user["username"], pf_name)
 
 
 @app.post("/api/portfolio/withdraw")
@@ -867,7 +897,7 @@ def api_portfolio_withdraw(body: FundsRequest, user: dict = Depends(get_current_
         }
     )
     save_portfolio(user["username"], pf, pf_name)
-    return _portfolio_response(user["username"], pf_name)
+    return _write_response(user["username"], pf_name)
 
 
 @app.get("/api/portfolio/recommendation")

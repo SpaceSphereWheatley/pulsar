@@ -6,8 +6,6 @@ from __future__ import annotations
 
 import inspect
 
-import pytest
-
 import portfolio
 import portfolio_history
 from recommendation import recommend
@@ -73,7 +71,6 @@ def test_portfolio_export_endpoint_exists(client, auth_headers):
 # ── G13 — GET /api/portfolio must be read-only ────────────────────────────────
 
 
-@pytest.mark.xfail(reason="G13: GET writes a history snapshot as a side effect", strict=False)
 def test_get_portfolio_does_not_write_history(client, auth_headers):
     """G13: reading the portfolio must not mutate on-disk state."""
     hist_path = portfolio_history._path("admin")
