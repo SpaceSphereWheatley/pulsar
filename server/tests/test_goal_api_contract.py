@@ -6,8 +6,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 SERVER = Path(__file__).resolve().parents[1]
 
 
@@ -58,7 +56,6 @@ def test_login_with_wrong_field_type_returns_422(client):
 # ── G10 — a non-admin user can change their own password ──────────────────────
 
 
-@pytest.mark.xfail(reason="G10: no self-service password-change endpoint", strict=False)
 def test_password_change_endpoint(client, auth_headers):
     """G10: an authenticated user can change their password and re-login."""
     r = client.post(

@@ -133,7 +133,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
 - **Why (User):** "I was given a login; I want to change my password."
 - **Measure:** authenticated `POST /api/auth/password` (self) exists, hashes with
   bcrypt, and the UI exposes it. Test: change password → old fails, new succeeds.
-- **Status:** `[ ]`
+- **Status:** `[x]` `POST /api/auth/password` + nav "Account" modal.
 
 ---
 
@@ -195,7 +195,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G7** Pydantic validation on every POST → 422 not 500 (tested)
 - [ ] **G8** ML scores persist, expose a quality metric, labeled experimental
 - [ ] **G9** Caches persist and load on boot (no-network boot test)
-- [ ] **G10** Self-service password change (tested)
+- [x] **G10** Self-service password change (tested)
 - [ ] **G11** One-command cross-platform run (Docker/make)
 - [ ] **G12** CORS from env, no hard-coded `*`
 - [ ] **G13** `GET /api/portfolio` is read-only (tested)

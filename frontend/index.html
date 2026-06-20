@@ -80,6 +80,28 @@
   </div>
 </div>
 
+<!-- Change-password modal -->
+<div id="passwordModal" class="fixed inset-0 items-center justify-center z-50 hidden" style="background:rgba(0,0,0,0.6)">
+  <div class="card p-6 w-full max-w-sm mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-sm font-semibold">Change password</div>
+      <button class="btn btn-ghost text-xs" onclick="closePasswordModal()">✕</button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs text-slate-400 mb-1 block">Current password</label>
+        <input id="curPass" type="password" autocomplete="current-password" />
+      </div>
+      <div>
+        <label class="text-xs text-slate-400 mb-1 block">New password</label>
+        <input id="newPass2" type="password" autocomplete="new-password" />
+      </div>
+      <div id="passwordMsg" class="text-xs hidden"></div>
+      <button class="btn btn-primary w-full" onclick="changePassword()">Update password</button>
+    </div>
+  </div>
+</div>
+
 <!-- Main app (hidden until logged in) -->
 <div id="app" class="hidden min-h-screen">
 
@@ -90,6 +112,7 @@
       <div class="flex items-center gap-3">
         <span id="navUser" class="text-slate-400 text-xs hidden sm:block"></span>
         <span id="navAdmin" class="tag tag-buy hidden">ADMIN</span>
+        <button class="btn btn-ghost text-xs" onclick="openPasswordModal()">Account</button>
         <button class="btn btn-ghost text-xs" onclick="doLogout()">Sign out</button>
       </div>
     </div>
@@ -343,6 +366,49 @@ function doLogout() {
   clearInterval(_refreshTimer);
   document.getElementById('app').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+// ── Account: self-service password change ──────────────────────────────────────
+function openPasswordModal() {
+  document.getElementById('curPass').value = '';
+  document.getElementById('newPass2').value = '';
+  const msg = document.getElementById('passwordMsg');
+  msg.classList.add('hidden');
+  const m = document.getElementById('passwordModal');
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+}
+
+function closePasswordModal() {
+  const m = document.getElementById('passwordModal');
+  m.classList.add('hidden');
+  m.classList.remove('flex');
+}
+
+async function changePassword() {
+  const current_password = document.getElementById('curPass').value;
+  const new_password = document.getElementById('newPass2').value;
+  const msg = document.getElementById('passwordMsg');
+  if (!new_password) {
+    msg.textContent = 'New password cannot be empty.';
+    msg.className = 'text-xs text-red-400';
+    return;
+  }
+  // Raw fetch (not apiFetch): a wrong current password returns 401, which we
+  // surface inline instead of force-logging-out the user.
+  const res = await fetch(API + '/api/auth/password', {
+    method: 'POST',
+    headers: authHdrs(),
+    body: JSON.stringify({ current_password, new_password }),
+  });
+  if (res && res.ok) {
+    msg.textContent = 'Password updated.';
+    msg.className = 'text-xs text-green-400';
+    setTimeout(closePasswordModal, 1000);
+  } else {
+    msg.textContent = 'Current password is incorrect.';
+    msg.className = 'text-xs text-red-400';
+  }
 }
 
 // ── App bootstrap ─────────────────────────────────────────────────────────────

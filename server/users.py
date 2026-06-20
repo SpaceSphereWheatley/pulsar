@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -26,7 +27,17 @@ def _load() -> dict:
 
 
 def _save(data: dict) -> None:
-    USERS_FILE.write_text(json.dumps(data, indent=2))
+    # Atomic write: temp file in the same dir, then os.replace, so a crash
+    # mid-write can never truncate users.json.
+    fd, tmp = tempfile.mkstemp(dir=str(USERS_FILE.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(json.dumps(data, indent=2))
+        os.replace(tmp, USERS_FILE)
+    except Exception:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
 
 
 def seed_admin() -> None:
@@ -77,6 +88,20 @@ def list_users() -> list[dict]:
         }
         for u, d in data.items()
     ]
+
+
+def change_password(username: str, current_password: str, new_password: str) -> bool:
+    """Verify the current password and set a new bcrypt hash.
+
+    Returns False if the user is unknown or the current password is wrong.
+    """
+    data = _load()
+    record = data.get(username)
+    if record is None or not verify_password(current_password, record["hashed_password"]):
+        return False
+    record["hashed_password"] = hash_password(new_password)
+    _save(data)
+    return True
 
 
 def delete_user(username: str) -> bool:

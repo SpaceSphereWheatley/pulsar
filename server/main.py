@@ -47,7 +47,14 @@ from portfolio import (
 from portfolio_history import load_history, record_snapshot
 from recommendation import recommend
 from scheduler import scheduler
-from users import authenticate, create_user, delete_user, list_users, seed_admin
+from users import (
+    authenticate,
+    change_password,
+    create_user,
+    delete_user,
+    list_users,
+    seed_admin,
+)
 from watchlist import add_coin as wl_add
 from watchlist import load_watchlist
 from watchlist import remove_coin as wl_remove
@@ -414,6 +421,16 @@ def api_login(body: LoginRequest):
         "username": user["username"],
         "is_admin": user["is_admin"],
     }
+
+
+@app.post("/api/auth/password")
+def api_change_password(body: PasswordChangeRequest, user: dict = Depends(get_current_user)):
+    """Self-service password change: verify the current password, set a new one."""
+    if not body.new_password:
+        raise HTTPException(400, "New password cannot be empty")
+    if not change_password(user["username"], body.current_password, body.new_password):
+        raise HTTPException(401, "Current password is incorrect")
+    return {"changed": True}
 
 
 @app.get("/api/auth/users")
