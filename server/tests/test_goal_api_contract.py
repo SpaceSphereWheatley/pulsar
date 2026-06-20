@@ -32,7 +32,6 @@ def test_fetches_use_retry_with_backoff():
 # ── G7 — malformed request bodies return 422, never a 500 ─────────────────────
 
 
-@pytest.mark.xfail(reason="G7: buy uses raw dict + float(); non-numeric → 500", strict=False)
 def test_buy_with_non_numeric_amount_returns_422(client, auth_headers):
     r = client.post(
         "/api/portfolio/buy",
@@ -42,7 +41,6 @@ def test_buy_with_non_numeric_amount_returns_422(client, auth_headers):
     assert r.status_code == 422
 
 
-@pytest.mark.xfail(reason="G7: deposit uses raw dict; wrong type → 500/400, not 422", strict=False)
 def test_deposit_with_wrong_type_returns_422(client, auth_headers):
     r = client.post(
         "/api/portfolio/deposit",
@@ -52,7 +50,6 @@ def test_deposit_with_wrong_type_returns_422(client, auth_headers):
     assert r.status_code == 422
 
 
-@pytest.mark.xfail(reason="G7: login accepts a raw dict with no schema", strict=False)
 def test_login_with_wrong_field_type_returns_422(client):
     r = client.post("/api/auth/login", json={"username": 123, "password": ["x"]})
     assert r.status_code == 422

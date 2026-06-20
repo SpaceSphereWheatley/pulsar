@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from auth import create_token, decode_token, warn_insecure_defaults
 from backtest import run_backtest
@@ -58,6 +59,39 @@ logger = logging.getLogger(__name__)
 # ── Auth helpers ──────────────────────────────────────────────────────────────
 
 _oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+
+# ── Request models (validated → 422, never 500, on malformed input) ────────────
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
+
+
+class CreatePortfolioRequest(BaseModel):
+    name: str
+
+
+class TradeRequest(BaseModel):
+    coin_id: str
+    usd_amount: float
+    portfolio: str = "default"
+
+
+class FundsRequest(BaseModel):
+    amount: float
+    portfolio: str = "default"
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 def get_current_user(token: str = Depends(_oauth2)) -> dict:
@@ -369,8 +403,8 @@ def _portfolio_response(username: str, pf_name: str = "default") -> dict:
 
 
 @app.post("/api/auth/login")
-def api_login(body: dict):
-    user = authenticate(body.get("username", ""), body.get("password", ""))
+def api_login(body: LoginRequest):
+    user = authenticate(body.username, body.password)
     if user is None:
         raise HTTPException(401, "Invalid credentials")
     token = create_token(user["username"], user["is_admin"])
@@ -388,9 +422,9 @@ def api_list_users(admin: dict = Depends(require_admin)):
 
 
 @app.post("/api/auth/users")
-def api_create_user(body: dict, admin: dict = Depends(require_admin)):
-    username = body.get("username", "").strip()
-    password = body.get("password", "")
+def api_create_user(body: CreateUserRequest, admin: dict = Depends(require_admin)):
+    username = body.username.strip()
+    password = body.password
     if not username or not password:
         raise HTTPException(400, "username and password are required")
     try:
@@ -585,8 +619,8 @@ def api_list_portfolios(user: dict = Depends(get_current_user)):
 
 
 @app.post("/api/portfolios")
-def api_create_portfolio(body: dict, user: dict = Depends(get_current_user)):
-    name = body.get("name", "").strip()
+def api_create_portfolio(body: CreatePortfolioRequest, user: dict = Depends(get_current_user)):
+    name = body.name.strip()
     if not name:
         raise HTTPException(400, "Portfolio name is required")
     try:
@@ -688,10 +722,10 @@ def api_portfolio_export(
 
 
 @app.post("/api/portfolio/buy")
-def api_portfolio_buy(body: dict, user: dict = Depends(get_current_user)):
-    coin_id = body.get("coin_id")
-    usd_amount = float(body.get("usd_amount", 0))
-    pf_name = body.get("portfolio", "default")
+def api_portfolio_buy(body: TradeRequest, user: dict = Depends(get_current_user)):
+    coin_id = body.coin_id
+    usd_amount = body.usd_amount
+    pf_name = body.portfolio
     if usd_amount < 1:
         raise HTTPException(400, "Minimum trade is $1")
     price = get_coin_price(coin_id)
@@ -725,10 +759,10 @@ def api_portfolio_buy(body: dict, user: dict = Depends(get_current_user)):
 
 
 @app.post("/api/portfolio/sell")
-def api_portfolio_sell(body: dict, user: dict = Depends(get_current_user)):
-    coin_id = body.get("coin_id")
-    usd_amount = float(body.get("usd_amount", 0))
-    pf_name = body.get("portfolio", "default")
+def api_portfolio_sell(body: TradeRequest, user: dict = Depends(get_current_user)):
+    coin_id = body.coin_id
+    usd_amount = body.usd_amount
+    pf_name = body.portfolio
     if usd_amount < 1:
         raise HTTPException(400, "Minimum trade is $1")
     price = get_coin_price(coin_id)
@@ -770,9 +804,9 @@ def api_portfolio_reset(
 
 
 @app.post("/api/portfolio/deposit")
-def api_portfolio_deposit(body: dict, user: dict = Depends(get_current_user)):
-    amount = float(body.get("amount", 0))
-    pf_name = body.get("portfolio", "default")
+def api_portfolio_deposit(body: FundsRequest, user: dict = Depends(get_current_user)):
+    amount = body.amount
+    pf_name = body.portfolio
     if amount <= 0:
         raise HTTPException(400, "Amount must be positive")
     pf = load_portfolio(user["username"], pf_name)
@@ -791,9 +825,9 @@ def api_portfolio_deposit(body: dict, user: dict = Depends(get_current_user)):
 
 
 @app.post("/api/portfolio/withdraw")
-def api_portfolio_withdraw(body: dict, user: dict = Depends(get_current_user)):
-    amount = float(body.get("amount", 0))
-    pf_name = body.get("portfolio", "default")
+def api_portfolio_withdraw(body: FundsRequest, user: dict = Depends(get_current_user)):
+    amount = body.amount
+    pf_name = body.portfolio
     if amount <= 0:
         raise HTTPException(400, "Amount must be positive")
     pf = load_portfolio(user["username"], pf_name)

@@ -110,7 +110,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
 - **Measure:** every POST route (`login`, `buy`, `sell`, `deposit`, `withdraw`,
   user/portfolio create) uses a **Pydantic model**; malformed input returns a
   **422 with a clear message**, never a 500. One negative test per route.
-- **Status:** `[ ]`
+- **Status:** `[x]` login/create-user/create-portfolio/buy/sell/deposit/withdraw all use Pydantic models.
 
 ### G8 — The ML score is honest and durable
 - **Why (both):** User must not mistake it for a forecast; Programmer wants it to
@@ -192,7 +192,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G4** Atomic writes + money-conservation invariant test + UI export
 - [ ] **G5** Friendly empty-state + no 500s when OHLC absent (tested)
 - [x] **G6** Retry/backoff on all fetches + `/api/health` (tested)
-- [ ] **G7** Pydantic validation on every POST → 422 not 500 (tested)
+- [x] **G7** Pydantic validation on every POST → 422 not 500 (tested)
 - [ ] **G8** ML scores persist, expose a quality metric, labeled experimental
 - [ ] **G9** Caches persist and load on boot (no-network boot test)
 - [ ] **G10** Self-service password change (tested)
