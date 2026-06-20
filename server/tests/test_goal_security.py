@@ -23,12 +23,25 @@ def test_dev_secret_placeholder_lives_in_code():
     assert auth.SECRET_KEY  # always resolves to *something*
 
 
-@pytest.mark.xfail(
-    reason="G3: no startup warning when secret/admin password are defaults", strict=False
-)
 def test_startup_warns_on_insecure_defaults():
     """G3: there must be a check that warns loudly on default secret/password."""
     assert hasattr(main, "warn_insecure_defaults") or hasattr(auth, "warn_insecure_defaults")
+
+
+def test_warn_insecure_defaults_fires_on_dev_secret(monkeypatch, caplog):
+    """G3: the check logs a WARNING and reports insecure when defaults are in use."""
+    monkeypatch.setattr(auth, "SECRET_KEY", auth._DEV_SECRET)
+    monkeypatch.setenv("PULSAR_ADMIN_PASSWORD", "admin")
+    with caplog.at_level("WARNING"):
+        assert auth.warn_insecure_defaults() is True
+    assert any("INSECURE DEFAULT" in r.message for r in caplog.records)
+
+
+def test_warn_insecure_defaults_silent_when_hardened(monkeypatch):
+    """G3: no false positive when a real secret and admin password are set."""
+    monkeypatch.setattr(auth, "SECRET_KEY", "a-real-32-byte-secret-value-here-ok")
+    monkeypatch.setenv("PULSAR_ADMIN_PASSWORD", "s3cret-passw0rd")
+    assert auth.warn_insecure_defaults() is False
 
 
 # ── G12 — CORS is configurable, not a hard-coded wildcard ─────────────────────

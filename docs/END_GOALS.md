@@ -72,7 +72,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
     `PULSAR_ADMIN_PASSWORD` is `admin`, the server logs a **prominent WARNING** (and the
     `/` page shows a dismissible banner). Verified by a test asserting the warning fires.
   - A documented one-command path to generate a real secret (`openssl rand -hex 32`) exists in `.env.example` (already present) **and** README setup.
-- **Status:** `[ ]` defaults are silent today.
+- **Status:** `[x]` `auth.warn_insecure_defaults()` fires a WARNING on startup; tested.
 
 ### G4 — Portfolio data cannot be corrupted or lost by normal use
 - **Why (User):** "My portfolio is the one thing I actually care about."
@@ -188,7 +188,7 @@ PULSAR is **done** when every box below is checked:
 
 - [ ] **G1** Tests: 0 failures/errors, coverage ≥ 80%, `data.py` failure paths tested
 - [x] **G2** Docs: 0 contradictions with `HEAD` (5 named drifts fixed)
-- [ ] **G3** Insecure defaults warn loudly at startup (tested)
+- [x] **G3** Insecure defaults warn loudly at startup (tested)
 - [ ] **G4** Atomic writes + money-conservation invariant test + UI export
 - [ ] **G5** Friendly empty-state + no 500s when OHLC absent (tested)
 - [ ] **G6** Retry/backoff on all fetches + `/api/health` (tested)

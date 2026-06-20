@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 
-from auth import create_token, decode_token
+from auth import create_token, decode_token, warn_insecure_defaults
 from backtest import run_backtest
 from data import (
     get_coin_price,
@@ -77,6 +77,7 @@ def require_admin(user: dict = Depends(get_current_user)) -> dict:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up…")
+    warn_insecure_defaults()
     seed_admin()
     init_data()
     await refresh_feargreed()
