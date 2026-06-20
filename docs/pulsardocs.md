@@ -86,9 +86,8 @@ Persistence:
 | `fastapi` | latest | REST API framework |
 | `uvicorn` | latest | ASGI server to run FastAPI |
 | `pycoingecko` | latest | CoinGecko API wrapper |
-| `pandas` | latest | Data manipulation |
-| `pandas-ta` | latest | Technical indicators (RSI, MACD, BB) |
-| `scikit-learn` | latest | ML model (TBD in Phase 4) |
+| `pandas` | latest | Data manipulation for OHLC series |
+| `scikit-learn` | latest | Per-coin Ridge regression ML score |
 | `apscheduler` | latest | Background data refresh scheduler |
 | `httpx` | latest | Async HTTP for Fear & Greed API |
 
@@ -140,7 +139,7 @@ pulsar/
 ### Historical OHLC Data (CoinGecko)
 
 - Fetched once per coin on startup, then refreshed every 6 hours
-- 90 days of daily OHLC candles per coin
+- 14 days of OHLC candles per coin (~4-hour granularity from CoinGecko)
 - Used for: RSI, MACD, Bollinger Bands, ML training
 - Cached in memory (and optionally to `cache.json`)
 
@@ -265,7 +264,7 @@ Returns Fear & Greed index with 7-day history, plain-language interpretation, an
 
 ### `GET /api/history/{coin_id}`
 
-Returns 90-day OHLC history for a single coin.
+Returns 14-day OHLC history for a single coin.
 
 **Parameters:** `coin_id` — CoinGecko coin ID (e.g. `bitcoin`)
 
@@ -273,7 +272,7 @@ Returns 90-day OHLC history for a single coin.
 ```json
 {
   "coin_id": "bitcoin",
-  "days": 90,
+  "days": 14,
   "data": [
     { "date": "2025-02-14", "open": 52000, "high": 53400, "low": 51200, "close": 52800, "volume": 28000000000 }
   ]
@@ -329,23 +328,34 @@ Returns the current virtual portfolio state.
 **Response:**
 ```json
 {
+  "portfolio_name": "default",
   "cash": 7240.50,
-  "initial_cash": 10000,
+  "cash_nok": 79645.50,
+  "total_deposited": 10000,
+  "total_withdrawn": 0,
+  "net_invested": 10000,
   "holdings": [
     {
       "coin_id": "bitcoin",
       "symbol": "btc",
+      "name": "Bitcoin",
+      "image": "https://...",
       "amount": 0.034,
       "avg_buy_price": 65000,
       "current_price": 67420,
       "value": 2292.28,
+      "value_nok": 25215.08,
       "pnl": 82.28,
+      "pnl_nok": 905.08,
       "pnl_pct": 3.73
     }
   ],
   "total_value": 9532.78,
+  "total_value_nok": 104860.58,
   "total_pnl": -467.22,
+  "total_pnl_nok": -5139.42,
   "total_pnl_pct": -4.67,
+  "nok_rate": 11.0,
   "transactions": [
     {
       "id": "txn_001",
@@ -360,6 +370,8 @@ Returns the current virtual portfolio state.
   ]
 }
 ```
+
+Portfolios start empty (cash $0); the user funds them via `POST /api/portfolio/deposit` and `POST /api/portfolio/withdraw`. P&L is measured against `net_invested = total_deposited − total_withdrawn`.
 
 ---
 
@@ -406,7 +418,7 @@ Sell a coin at the current live price.
 
 ### `POST /api/portfolio/reset`
 
-Reset portfolio to $10,000 cash, clearing all holdings and transaction history.
+Reset portfolio to an empty $0 state, clearing all holdings, deposits, and transaction history.
 
 **Response:** Fresh portfolio state
 
@@ -414,7 +426,7 @@ Reset portfolio to $10,000 cash, clearing all holdings and transaction history.
 
 ## 6. Technical Indicators
 
-All indicators are computed using `pandas-ta` on 90-day daily OHLC data.
+All indicators are hand-rolled in `indicators.py` (no third-party TA library) on the 14-day OHLC series.
 
 ### RSI (Relative Strength Index)
 - Period: 14 days
@@ -482,9 +494,10 @@ Score → Signal mapping:
 ## 8. Virtual Portfolio Spec
 
 ### Starting State
-- Cash: $10,000 USD
+- Cash: $0 USD (fund via deposit)
 - Holdings: empty
 - Transactions: empty
+- Tracked totals: `total_deposited` = 0, `total_withdrawn` = 0
 
 ### Persistence
 - Saved to `server/portfolio.json` on every buy/sell/reset
@@ -494,8 +507,9 @@ Score → Signal mapping:
 ### Portfolio Data Model (`portfolio.json`)
 ```json
 {
-  "cash": 10000,
-  "initial_cash": 10000,
+  "cash": 0.0,
+  "total_deposited": 0.0,
+  "total_withdrawn": 0.0,
   "holdings": {},
   "transactions": []
 }
@@ -530,7 +544,8 @@ Score → Signal mapping:
 
 ### P&L Calculation (computed on read, not stored)
 - Per holding: `(current_price - avg_buy_price) / avg_buy_price * 100`
-- Total: `(total_value - initial_cash) / initial_cash * 100`
+- Total: `(total_value - net_invested) / net_invested * 100`, where
+  `net_invested = total_deposited - total_withdrawn`
 
 ---
 
@@ -662,7 +677,7 @@ Tasks:
 
 Tasks:
 - Implement `GET /api/history/{coin_id}`
-- Implement `indicators.py` using `pandas-ta`
+- Implement `indicators.py` with hand-rolled RSI/MACD/Bollinger math
 - Add indicator fields to `/api/coins` response
 - Implement per-coin signal scoring logic
 - Implement composite coin score (signal score only until Phase 4 adds ML)
@@ -750,10 +765,13 @@ fastapi
 uvicorn[standard]
 pycoingecko
 pandas
-pandas-ta
 scikit-learn
 apscheduler
 httpx
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt==4.0.1
+python-dotenv
 ```
 
 ---
@@ -763,6 +781,6 @@ httpx
 - **Not financial advice.** All signals, scores, and predictions are for educational and entertainment purposes only.
 - **CoinGecko rate limits.** The free public API allows ~30 calls/minute. The caching layer is designed to stay well within this limit.
 - **RSI/MACD accuracy.** Indicators are computed on daily candles only. Intraday movements are not captured.
-- **ML predictions.** Cryptocurrency prices are highly unpredictable. Any ML model trained on 90 days of data should be treated as experimental. Past performance does not predict future results.
+- **ML predictions.** Cryptocurrency prices are highly unpredictable. The per-coin Ridge regression is trained on a short OHLC window and should be treated as experimental. Past performance does not predict future results.
 - **Virtual portfolio prices.** Buy/sell prices are taken from the server's cached data, which may be up to 60 seconds old.
 - **No real money.** The virtual portfolio is entirely simulated. No real transactions are made.

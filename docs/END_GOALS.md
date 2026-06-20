@@ -62,7 +62,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
   4. `README.md` "Build phases" table reflects reality: **Phases 1–5 shipped** (or the table is removed).
   5. The `/api/portfolio` and `/api/feargreed` example payloads match the actual response keys (e.g. `total_deposited`/`net_invested`, NOK fields, `market_score`).
 - **Done when:** a reader can follow any doc statement and observe exactly that behavior. **0 contradictions.**
-- **Status:** `[ ]` multiple drifts confirmed.
+- **Status:** `[x]` all 5 named drifts corrected; example payloads match real responses.
 
 ### G3 — No insecure defaults can reach a running instance unnoticed
 - **Why (both):** User may expose the port; Programmer knows `admin/admin` + a
@@ -187,7 +187,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
 PULSAR is **done** when every box below is checked:
 
 - [ ] **G1** Tests: 0 failures/errors, coverage ≥ 80%, `data.py` failure paths tested
-- [ ] **G2** Docs: 0 contradictions with `HEAD` (5 named drifts fixed)
+- [x] **G2** Docs: 0 contradictions with `HEAD` (5 named drifts fixed)
 - [ ] **G3** Insecure defaults warn loudly at startup (tested)
 - [ ] **G4** Atomic writes + money-conservation invariant test + UI export
 - [ ] **G5** Friendly empty-state + no 500s when OHLC absent (tested)

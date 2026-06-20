@@ -34,9 +34,9 @@ pulsar/
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 1 | ✅ Complete | Server foundation — live CoinGecko data, all API routes |
-| 2 | Pending | Technical indicators (RSI, MACD, BB) & scoring |
-| 3 | Pending | Full frontend dashboard |
-| 4 | Pending | ML-based investment scoring |
-| 5 | Pending | Polish & extras |
+| 2 | ✅ Complete | Technical indicators (RSI, MACD, BB) & scoring |
+| 3 | ✅ Complete | Full frontend dashboard |
+| 4 | ✅ Complete | ML-based investment scoring |
+| 5 | ✅ Complete | Polish & extras |
 
 See `docs/pulsardocs.md` for the full specification.

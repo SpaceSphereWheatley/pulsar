@@ -115,25 +115,21 @@ def test_portfolio_starts_at_zero_with_deposit_model():
 # prose is corrected — that is the signal G2 is done.
 
 
-@pytest.mark.xfail(reason="G2: pulsardocs.md still describes 90-day OHLC", strict=False)
 def test_pulsardocs_states_14_day_window():
     docs = (ROOT / "docs" / "pulsardocs.md").read_text()
     assert "90-day" not in docs and "90 days of daily OHLC" not in docs
 
 
-@pytest.mark.xfail(reason="G2: pulsardocs.md still references pandas-ta", strict=False)
 def test_pulsardocs_no_pandas_ta_claim():
     docs = (ROOT / "docs" / "pulsardocs.md").read_text()
     assert "pandas-ta" not in docs
 
 
-@pytest.mark.xfail(reason="G2: README build-phase table still shows phases Pending", strict=False)
 def test_readme_phase_table_not_stale():
     readme = (ROOT / "README.md").read_text()
     assert "Pending" not in readme
 
 
-@pytest.mark.xfail(reason="G2: pulsardocs.md still claims $10,000 initial_cash", strict=False)
 def test_pulsardocs_portfolio_starts_at_zero():
     docs = (ROOT / "docs" / "pulsardocs.md").read_text()
     assert "Cash: $10,000" not in docs and '"initial_cash": 10000' not in docs
