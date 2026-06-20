@@ -151,7 +151,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
   even for localhost.
 - **Measure:** allowed origins come from an env var (default `http://localhost:8000`,
   `http://localhost:8001`); `*` is no longer hard-coded. README documents how to add one.
-- **Status:** `[ ]`
+- **Status:** `[x]` `PULSAR_CORS_ORIGINS` drives allow_origins; documented in `.env.example` and `CLAUDE.md`.
 
 ### G13 — Snapshotting has no side effects on reads
 - **Why (Programmer):** `_portfolio_response` writes a history snapshot on every
@@ -197,7 +197,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G9** Caches persist and load on boot (no-network boot test)
 - [x] **G10** Self-service password change (tested)
 - [ ] **G11** One-command cross-platform run (Docker/make)
-- [ ] **G12** CORS from env, no hard-coded `*`
+- [x] **G12** CORS from env, no hard-coded `*`
 - [x] **G13** `GET /api/portfolio` is read-only (tested)
 - [x] **G14** Recommendation P&L uses `net_invested` (tested)
 - [ ] **G15** Accessibility ≥ 90, no 375px horizontal scroll

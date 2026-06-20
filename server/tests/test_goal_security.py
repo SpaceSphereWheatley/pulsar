@@ -5,8 +5,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 import auth
 import main
 
@@ -47,7 +45,6 @@ def test_warn_insecure_defaults_silent_when_hardened(monkeypatch):
 # ── G12 — CORS is configurable, not a hard-coded wildcard ─────────────────────
 
 
-@pytest.mark.xfail(reason="G12: CORS allow_origins is hard-coded to ['*']", strict=False)
 def test_cors_is_not_wildcard():
     """G12: allowed origins should come from config, not a literal '*'."""
     src = (SERVER / "main.py").read_text()

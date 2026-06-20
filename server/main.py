@@ -199,9 +199,19 @@ def _refresh_ml() -> None:
 
 app = FastAPI(title="Pulsar", lifespan=lifespan)
 
+# CORS origins come from PULSAR_CORS_ORIGINS (comma-separated), defaulting to the
+# uvicorn-dev (8000) and start.sh (8001) ports. No hard-coded wildcard.
+_cors_origins = [
+    o.strip()
+    for o in os.environ.get(
+        "PULSAR_CORS_ORIGINS", "http://localhost:8000,http://localhost:8001"
+    ).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
