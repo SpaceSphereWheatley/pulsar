@@ -58,14 +58,12 @@ def test_avg_buy_price_is_weighted_average(client, auth_headers):
     assert abs(holding["avg_buy_price"] - 67_000.0) < 1e-6
 
 
-@pytest.mark.xfail(reason="G4: save_portfolio is not atomic (no temp+rename)", strict=False)
 def test_portfolio_writes_are_atomic():
     """G4: a crash mid-write must never truncate the file → write temp, then rename."""
     src = inspect.getsource(portfolio.save_portfolio)
     assert "os.replace" in src or ".rename(" in src
 
 
-@pytest.mark.xfail(reason="G4: no portfolio export endpoint yet", strict=False)
 def test_portfolio_export_endpoint_exists(client, auth_headers):
     """G4: users can export their portfolio + transactions (CSV/JSON)."""
     r = client.get("/api/portfolio/export", headers=auth_headers)

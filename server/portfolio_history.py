@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import date
 from pathlib import Path
 
@@ -12,6 +14,19 @@ _HISTORY_DIR = Path(__file__).parent
 def _path(username: str, pf_name: str = "default") -> Path:
     suffix = "" if pf_name == "default" else f"_{pf_name}"
     return _HISTORY_DIR / f"portfolio_history_{username}{suffix}.json"
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Write via temp file + os.replace so a crash never truncates the file."""
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except Exception:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
 
 
 def load_history(username: str, pf_name: str = "default") -> list[dict]:
@@ -44,4 +59,4 @@ def record_snapshot(
         }
     )
     history = sorted(history, key=lambda x: x["date"])[-365:]
-    _path(username, pf_name).write_text(json.dumps(history))
+    _atomic_write_text(_path(username, pf_name), json.dumps(history))

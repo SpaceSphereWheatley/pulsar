@@ -80,7 +80,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
   - Portfolio/watchlist/history JSON writes are **atomic** (write-temp-then-rename), proven by a test that interrupts/!concurrently writes and never yields a truncated/invalid file.
   - Buy/sell math is exact to the cent: a property test of N random buy/sell sequences asserts `cash + Σ(holding_value_at_cost) == Σ(deposits) − Σ(withdrawals) − realized_loss` invariants hold (no money created or destroyed).
   - A user can **export** their portfolio + transaction history to CSV/JSON from the UI (one click) → addresses "don't lose my data on a container reset."
-- **Status:** `[ ]` writes are non-atomic; no export.
+- **Status:** `[x]` writes go via temp-file + `os.replace`; `GET /api/portfolio/export` returns CSV (or JSON).
 
 ---
 
@@ -189,7 +189,7 @@ PULSAR is **done** when every box below is checked:
 - [ ] **G1** Tests: 0 failures/errors, coverage ≥ 80%, `data.py` failure paths tested
 - [x] **G2** Docs: 0 contradictions with `HEAD` (5 named drifts fixed)
 - [x] **G3** Insecure defaults warn loudly at startup (tested)
-- [ ] **G4** Atomic writes + money-conservation invariant test + UI export
+- [x] **G4** Atomic writes + money-conservation invariant test + UI export
 - [ ] **G5** Friendly empty-state + no 500s when OHLC absent (tested)
 - [ ] **G6** Retry/backoff on all fetches + `/api/health` (tested)
 - [ ] **G7** Pydantic validation on every POST → 422 not 500 (tested)

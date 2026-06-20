@@ -14,6 +14,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 
@@ -613,6 +614,67 @@ def api_portfolio_history(
     portfolio: str = Query("default"),
 ):
     return load_history(user["username"], portfolio)
+
+
+@app.get("/api/portfolio/export")
+def api_portfolio_export(
+    user: dict = Depends(get_current_user),
+    portfolio: str = Query("default"),
+    format: str = Query("csv"),
+):
+    """Export the portfolio + full transaction history.
+
+    Defaults to CSV (one section for holdings, one for transactions) so a user
+    can keep their data across a container reset. ``format=json`` returns the
+    same data as the live portfolio response plus the raw transaction log.
+    """
+    import csv
+    import io
+
+    resp = _portfolio_response(user["username"], portfolio)
+    if format == "json":
+        return resp
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["section", "portfolio", portfolio])
+    writer.writerow([])
+    writer.writerow(["holding", "coin_id", "symbol", "amount", "avg_buy_price", "value", "pnl"])
+    for h in resp["holdings"]:
+        writer.writerow(
+            [
+                "holding",
+                h["coin_id"],
+                h["symbol"],
+                h["amount"],
+                h["avg_buy_price"],
+                h["value"],
+                h["pnl"],
+            ]
+        )
+    writer.writerow([])
+    writer.writerow(
+        ["transaction", "id", "type", "coin_id", "amount", "price", "total", "timestamp"]
+    )
+    for t in resp["transactions"]:
+        writer.writerow(
+            [
+                "transaction",
+                t.get("id"),
+                t.get("type"),
+                t.get("coin_id"),
+                t.get("amount"),
+                t.get("price"),
+                t.get("total"),
+                t.get("timestamp"),
+            ]
+        )
+    filename = f"portfolio_{user['username']}_{portfolio}.csv"
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.post("/api/portfolio/buy")
