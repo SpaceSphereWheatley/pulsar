@@ -5,6 +5,16 @@ Copy everything in the fenced block below into a fresh Claude Code session
 (`server/tests/test_goal_*.py`) as the executable definition-of-done: the job is
 to drive every `xfail` to a real pass until `pytest -rX` reports nothing.
 
+The prompt is **self-looping** — once pasted it works goal-by-goal without
+stopping for confirmation until the done-condition holds. To instead run it on a
+scheduled interval (e.g. babysitting a long build), paste this one-liner instead:
+
+```text
+/loop 20m Continue finishing PULSAR per docs/FINISH_PROMPT.md: pick the next xfail
+goal, implement it, remove the marker, keep pytest + ruff green, commit and push.
+Stop the loop when `pytest -rX server/tests/test_goal_*.py` reports zero xfails.
+```
+
 ---
 
 ````text
@@ -53,6 +63,18 @@ For EACH goal:
 6. Commit with a focused message: `Gn: <what changed>`. Then push.
 Never batch multiple goals into one commit. One goal = one green, reviewable commit.
 
+## Autonomous loop — do not stop to ask
+Run this as a continuous loop. After each goal's green commit, IMMEDIATELY pick the
+next xfail goal and keep going — do not pause for confirmation. At the top of every
+cycle, re-run the full done-check (`pytest`, `pytest -rX server/tests/test_goal_*.py`,
+`ruff check`/`ruff format --check`). If you hit an ambiguous decision you cannot
+resolve from `CLAUDE.md`, `docs/END_GOALS.md`, or the test contract, make the most
+reasonable choice consistent with those documents, record it in the commit message,
+and continue — do NOT halt. Only stop when the done-condition below is fully met, or
+when a test exposes a genuine conflict in the spec itself (then fix test + END_GOALS
+together, per the hard rules, and continue). Report progress as you close each goal;
+do not wait until the end.
+
 ## The goals and the exact contract each test expects
 
 P0:
@@ -92,16 +114,21 @@ P1:
 P2:
 - G11 — Add a `Dockerfile` (or `Makefile` with a `run` target) for one-command,
   cross-platform startup; make the README quick-start work verbatim.
-- G12 — Drive CORS `allow_origins` from an env var (default localhost:8000/8001);
-  remove the hard-coded `["*"]` from `server/main.py`.
+- G12 — Drive CORS `allow_origins` from a new env var `PULSAR_CORS_ORIGINS`
+  (comma-separated), defaulting to `http://localhost:8000,http://localhost:8001`
+  (the uvicorn-dev and start.sh ports). Remove the hard-coded `["*"]` from
+  `server/main.py`. Document the var in `.env.example` and `CLAUDE.md`.
 - G13 — Make `GET /api/portfolio` read-only: move the daily history snapshot out of
   `_portfolio_response` into the scheduler (or a dedicated write path). The test
   asserts a GET creates no history file.
 - G14 — In `recommendation.py`, compute the summary P&L from
   `net_invested = total_deposited - total_withdrawn` (matching `_portfolio_response`),
   not the legacy `initial_cash=10000` fallback.
-- G15 — Wire an accessibility audit (Lighthouse/axe/pa11y) into CI targeting ≥90;
-  keep the existing viewport/button-label tests green.
+- G15 — Wire **Lighthouse CI** into `.github/workflows/ci.yml` (e.g. the
+  `treosh/lighthouse-ci-action`) as a new job that starts the server, audits the
+  served page, and **fails the build if the Accessibility category is below 0.90**.
+  Add an `lighthouserc`/config asserting `categories:accessibility` minScore 0.9.
+  Keep the existing viewport/button-label tests green.
 - G16 — Add a persistent "not financial advice / educational only" disclaimer to
   `frontend/index.html`.
 
@@ -121,11 +148,11 @@ Start now with G2 and G14 (fastest wins), then proceed in P0→P1→P2 order.
 - **Why this works:** the prompt doesn't describe features in prose that can drift —
   it points at tests that already encode acceptance. "Done" is `pytest -rX` being
   empty, which is unambiguous and self-checking.
-- **Want it hands-off?** Prepend `/loop 15m` to run the loop on an interval, or tell
-  the session to "continue to the next goal automatically until `pytest -rX` is empty."
+- **Hands-off:** the prompt is self-looping (the "Autonomous loop" section). For a
+  scheduled cadence instead, use the `/loop 20m …` one-liner at the top of this file.
 - **Scope guard:** the prompt forbids weakening tests and pins the no-database /
   single-file-frontend / line-length-100 constraints so the agent can't "finish" by
   cutting corners.
-- **Two goals need a real decision** when you get there: G12's exact allowed origins
-  and G15's audit tool/threshold. If you have preferences, add them to the prompt;
-  otherwise the defaults shown are sensible.
+- **Decisions already made for you** (baked into the prompt, change only if you want):
+  - G12 CORS → `PULSAR_CORS_ORIGINS`, default `http://localhost:8000,http://localhost:8001`.
+  - G15 audit → Lighthouse CI, Accessibility category gated at ≥ 0.90.
