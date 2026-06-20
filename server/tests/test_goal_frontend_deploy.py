@@ -60,6 +60,5 @@ def test_accessibility_audit_is_enforced():
 # ── G11 — one-command, cross-platform run ─────────────────────────────────────
 
 
-@pytest.mark.xfail(reason="G11: no Dockerfile / Makefile for cross-platform run", strict=False)
 def test_cross_platform_run_artifact_exists():
     assert (ROOT / "Dockerfile").exists() or (ROOT / "Makefile").exists()

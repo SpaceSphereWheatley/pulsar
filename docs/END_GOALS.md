@@ -144,7 +144,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
 - **Measure:** a **Dockerfile** (or documented `make run`) brings the app up on
   Linux/macOS/Windows with `.env` mounted; README's quick-start works verbatim,
   verified on a clean checkout.
-- **Status:** `[ ]`
+- **Status:** `[x]` `Dockerfile` + `Makefile` (`make run` / `docker run`); README quick-start updated.
 
 ### G12 — Tightened, documented CORS
 - **Why (Programmer):** `allow_origins=["*"]` with credentials-bearing tokens is sloppy
@@ -196,7 +196,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G8** ML scores persist, expose a quality metric, labeled experimental
 - [x] **G9** Caches persist and load on boot (no-network boot test)
 - [x] **G10** Self-service password change (tested)
-- [ ] **G11** One-command cross-platform run (Docker/make)
+- [x] **G11** One-command cross-platform run (Docker/make)
 - [x] **G12** CORS from env, no hard-coded `*`
 - [x] **G13** `GET /api/portfolio` is read-only (tested)
 - [x] **G14** Recommendation P&L uses `net_invested` (tested)
