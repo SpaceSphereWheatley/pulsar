@@ -166,7 +166,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
   `total_deposited − total_withdrawn`. On a $0-start portfolio these disagree.
 - **Measure:** recommendation summary derives P&L from `net_invested`, matching
   `_portfolio_response`. A test with deposits ≠ 10,000 asserts the two agree.
-- **Status:** `[ ]` confirmed inconsistency.
+- **Status:** `[x]` summary P&L now derives from `net_invested`.
 
 ### G15 — Accessibility & mobile pass
 - **Why (User):** It's a mobile-first app; it should be usable on a phone and with a screen reader.
@@ -199,7 +199,7 @@ PULSAR is **done** when every box below is checked:
 - [ ] **G11** One-command cross-platform run (Docker/make)
 - [ ] **G12** CORS from env, no hard-coded `*`
 - [ ] **G13** `GET /api/portfolio` is read-only (tested)
-- [ ] **G14** Recommendation P&L uses `net_invested` (tested)
+- [x] **G14** Recommendation P&L uses `net_invested` (tested)
 - [ ] **G15** Accessibility ≥ 90, no 375px horizontal scroll
 - [ ] **G16** Persistent not-financial-advice disclaimer in UI
 

@@ -191,8 +191,12 @@ def recommend(
     # ── Overall summary ───────────────────────────────────────────────────────
     n_buy = sum(1 for r in recs if r["action"] == "buy")
     n_sell = sum(1 for r in recs if r["action"] == "sell")
-    initial_cash = portfolio.get("initial_cash", 10_000.0)
-    total_pnl_pct = (total_value - initial_cash) / initial_cash * 100 if initial_cash else 0
+    # P&L is measured against net invested capital (deposits − withdrawals),
+    # matching _portfolio_response. Fall back to the legacy initial_cash field
+    # only for old portfolios that predate the deposit/withdraw model.
+    total_deposited = portfolio.get("total_deposited", portfolio.get("initial_cash", 0.0))
+    net_invested = total_deposited - portfolio.get("total_withdrawn", 0.0)
+    total_pnl_pct = (total_value - net_invested) / net_invested * 100 if net_invested else 0
     cash_pct = cash / total_value * 100 if total_value else 100
 
     if not holdings:

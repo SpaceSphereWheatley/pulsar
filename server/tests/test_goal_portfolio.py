@@ -88,9 +88,6 @@ def test_get_portfolio_does_not_write_history(client, auth_headers):
 # ── G14 — recommendation P&L uses net_invested, not legacy initial_cash ───────
 
 
-@pytest.mark.xfail(
-    reason="G14: recommend() still derives P&L from initial_cash=10000", strict=False
-)
 def test_recommendation_pnl_uses_net_invested():
     """G14: a $500-funded portfolio worth $600 is up 20%, not down 94%."""
     pf = {
