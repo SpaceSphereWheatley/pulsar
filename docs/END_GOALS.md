@@ -94,7 +94,7 @@ These are the items where the Senior Programmer and the End User agreed loudest.
     ("History/Signals need a free CoinGecko key — here's how") instead of blank cards.
   - `/api/coins`, `/api/signals`, `/api/backtest/*` return a structured, documented
     response (not a 500) when OHLC is absent. Asserted by tests with OHLC cache empty.
-- **Status:** `[ ]`
+- **Status:** `[x]` endpoints degrade gracefully (200 with null indicators / 404 backtest); covered by the goal suite.
 
 ### G6 — External API failures are resilient, not fatal
 - **Why (Programmer):** Free APIs rate-limit and flake.
@@ -190,7 +190,7 @@ PULSAR is **done** when every box below is checked:
 - [x] **G2** Docs: 0 contradictions with `HEAD` (5 named drifts fixed)
 - [x] **G3** Insecure defaults warn loudly at startup (tested)
 - [x] **G4** Atomic writes + money-conservation invariant test + UI export
-- [ ] **G5** Friendly empty-state + no 500s when OHLC absent (tested)
+- [x] **G5** Friendly empty-state + no 500s when OHLC absent (tested)
 - [x] **G6** Retry/backoff on all fetches + `/api/health` (tested)
 - [x] **G7** Pydantic validation on every POST → 422 not 500 (tested)
 - [x] **G8** ML scores persist, expose a quality metric, labeled experimental
