@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#EDE8DD">
+<title>PULSAR — Crypto Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- Login overlay -->
+<div id="loginScreen" class="overlay">
+  <div class="panel panel-pad panel-sm">
+    <div class="brand">PULSAR</div>
+    <div class="brand-sub eyebrow">Crypto Intelligence Dashboard</div>
+    <div style="margin-top:1.5rem">
+      <div class="field">
+        <label for="loginUser">Username</label>
+        <input id="loginUser" type="text" placeholder="username" autocomplete="username" aria-label="Username" />
+      </div>
+      <div class="field">
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" placeholder="password" autocomplete="current-password" aria-label="Password" />
+      </div>
+      <div id="loginError" class="err-msg hidden"></div>
+      <button class="btn btn-primary btn-block" onclick="doLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change-password modal -->
+<div id="passwordModal" class="overlay hidden">
+  <div class="panel panel-pad panel-sm">
+    <div class="field-row">
+      <div style="font-size:0.9rem;font-weight:700">Change password</div>
+      <button class="btn btn-ghost btn-xs" onclick="closePasswordModal()">&#x2715;</button>
+    </div>
+    <div class="field">
+      <label>Current password</label>
+      <input id="curPass" type="password" autocomplete="current-password" />
+    </div>
+    <div class="field">
+      <label>New password</label>
+      <input id="newPass2" type="password" autocomplete="new-password" />
+    </div>
+    <div id="passwordMsg" class="err-msg hidden"></div>
+    <button class="btn btn-primary btn-block" onclick="changePassword()">Update password</button>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app" class="hidden">
+
+  <div class="toprule">
+    <div class="toprule-inner">
+      <span class="toprule-name">PULSAR</span>
+      <div class="toprule-right">
+        <span id="navUser" class="nav-user hidden"></span>
+        <span id="navAdmin" class="pill pill-admin hidden">ADMIN</span>
+        <button class="btn btn-ghost btn-xs" onclick="openPasswordModal()">Account</button>
+        <button class="btn btn-ghost btn-xs" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tabbar-inner">
+      <div class="tab active" data-tab="market"    onclick="switchTab('market')">Market</div>
+      <div class="tab"        data-tab="signals"   onclick="switchTab('signals')">Signals</div>
+      <div class="tab"        data-tab="portfolio" onclick="switchTab('portfolio')">Portfolio</div>
+      <div class="tab"        data-tab="news"      onclick="switchTab('news')">News</div>
+      <div class="tab"        data-tab="admin"     onclick="switchTab('admin')" id="adminTab" style="display:none">Admin</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── Market tab ─────────────────────────────────────────────── -->
+    <div id="tab-market">
+      <div id="marketStats" class="card card-pad stat-grid" style="margin-bottom:1.5rem"></div>
+      <div class="split">
+        <div class="card card-pad-lg">
+          <div class="sec-head">Fear &amp; Greed Index</div>
+          <div id="fgGauge" class="gauge-col"><div class="spinner"></div></div>
+        </div>
+        <div id="coinList" style="display:flex; flex-direction:column; gap:0.75rem">
+          <div class="spinner-row"><div class="spinner"></div><span>Loading coins&hellip;</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Signals tab ────────────────────────────────────────────── -->
+    <div id="tab-signals" class="hidden" style="display:none; flex-direction:column; gap:1.5rem">
+      <div class="card tbl-wrap" id="signalsTable">
+        <div class="spinner-row"><div class="spinner"></div><span>Loading signals&hellip;</span></div>
+      </div>
+      <div class="card card-pad-lg">
+        <div class="sec-head">Signal Backtest</div>
+        <div class="form-grid" style="grid-template-columns:1fr auto; align-items:end; margin-bottom:1rem">
+          <div class="field" style="margin-bottom:0">
+            <label>Coin</label>
+            <select id="backtestCoin"></select>
+          </div>
+          <button class="btn btn-primary" onclick="runBacktest()">Run Backtest</button>
+        </div>
+        <div id="backtestResult"></div>
+      </div>
+    </div>
+
+    <!-- ── Portfolio tab ──────────────────────────────────────────── -->
+    <div id="tab-portfolio" class="hidden" style="display:none; flex-direction:column; gap:1.5rem">
+
+      <div class="card pf-bar">
+        <div class="pf-bar-left">
+          <label>Portfolio</label>
+          <select id="pfSelector" onchange="switchPortfolio(this.value)"></select>
+        </div>
+        <div class="pf-bar-right">
+          <input id="newPfName" type="text" placeholder="new name" />
+          <button class="btn btn-ghost btn-xs" onclick="createPortfolio()">+ New</button>
+          <button class="btn btn-danger btn-xs" onclick="deletePortfolio()" id="deletePfBtn">Delete</button>
+          <button id="currencyToggle" class="btn btn-ghost btn-xs" onclick="toggleCurrency()">Show in NOK</button>
+        </div>
+      </div>
+
+      <div id="pfHero" class="card card-pad-lg stat-grid" style="grid-template-columns:repeat(4,1fr)"></div>
+
+      <div class="card card-pad-lg">
+        <div class="sec-head">Portfolio Value History</div>
+        <div id="pfHistoryChart"><div class="bt-none">No history yet.</div></div>
+      </div>
+
+      <div id="pfRecommendations" class="card card-pad-lg">
+        <div class="sec-head" style="margin-bottom:0.75rem">What should I do?</div>
+        <div class="spinner-row"><div class="spinner"></div><span>Loading advice&hellip;</span></div>
+      </div>
+
+      <div class="card card-pad-lg">
+        <div class="sec-head">Funds</div>
+        <div class="form-grid">
+          <div class="form-col">
+            <div class="field" style="margin-bottom:0">
+              <label>Amount (USD)</label>
+              <input id="fundAmount" type="number" placeholder="1000" min="1" />
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary btn-flex" onclick="doFund('deposit')">Deposit</button>
+              <button class="btn btn-ghost btn-flex"  onclick="doFund('withdraw')">Withdraw</button>
+            </div>
+          </div>
+          <div id="fundMsg" class="inline-msg"></div>
+        </div>
+      </div>
+
+      <div class="card card-pad-lg">
+        <div class="sec-head">Trade</div>
+        <div class="form-grid">
+          <div class="form-col">
+            <div class="field" style="margin-bottom:0">
+              <label>Coin</label>
+              <select id="tradeCoin"></select>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>Amount (USD)</label>
+              <input id="tradeAmount" type="number" placeholder="100" min="1" />
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary btn-flex" onclick="doTrade('buy')">Buy</button>
+              <button class="btn btn-danger btn-flex"  onclick="doTrade('sell')">Sell</button>
+            </div>
+          </div>
+          <div id="tradeMsg" class="inline-msg"></div>
+        </div>
+      </div>
+
+      <div class="card tbl-wrap">
+        <div class="tbl-head-bar">Holdings</div>
+        <div id="holdingsTable"></div>
+      </div>
+
+      <div class="card tbl-wrap">
+        <div class="tbl-head-bar">
+          <span>Transactions</span>
+          <div class="btn-row">
+            <button class="btn btn-ghost btn-xs" onclick="exportCsv()">Export CSV</button>
+            <button class="btn btn-danger btn-xs" onclick="resetPortfolio()">Reset</button>
+          </div>
+        </div>
+        <div id="txnTable"></div>
+      </div>
+    </div>
+
+    <!-- ── News tab ───────────────────────────────────────────────── -->
+    <div id="tab-news" class="hidden" style="display:none">
+      <div id="newsList" class="news-list">
+        <div class="spinner-row"><div class="spinner"></div><span>Loading news&hellip;</span></div>
+      </div>
+    </div>
+
+    <!-- ── Admin tab ──────────────────────────────────────────────── -->
+    <div id="tab-admin" class="hidden" style="display:none; flex-direction:column; gap:1.5rem">
+      <div class="card card-pad-lg">
+        <div class="sec-head">Create User</div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr auto; align-items:end">
+          <div class="field" style="margin-bottom:0">
+            <label>Username</label>
+            <input id="newUser" type="text" placeholder="alice" />
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Password</label>
+            <input id="newPass" type="password" placeholder="••••••" />
+          </div>
+          <button class="btn btn-primary" onclick="createUser()">Create</button>
+        </div>
+        <div id="createMsg" class="err-msg hidden" style="margin-top:0.75rem"></div>
+      </div>
+
+      <div class="card tbl-wrap">
+        <div class="tbl-head-bar">Users</div>
+        <div id="userTable"></div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      &#x26A0;&#xFE0F; <strong>Not financial advice.</strong> PULSAR is for educational purposes only.
+      Signals, scores, and the experimental ML output are not investment recommendations.
+      The portfolio is virtual — no real money is involved.
+    </footer>
+
+  </div>
+</div>
+
+<script src="./script.js"></script>
+</body>
+</html>
