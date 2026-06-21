@@ -6,7 +6,7 @@ compatibility_date = "2026-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "pulsar"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "f95879d9-6f35-498e-b180-13b9a0b09926"
 
 # Cron triggers replace the APScheduler jobs (see runScheduled in worker/index.js).
 # Coins was 60s in the FastAPI app; Cron's floor is 1 minute and CoinGecko's free
