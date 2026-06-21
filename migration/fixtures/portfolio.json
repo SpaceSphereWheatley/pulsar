@@ -1,0 +1,614 @@
+{
+  "coins_cache": {
+    "bitcoin": {
+      "id": "bitcoin",
+      "symbol": "btc",
+      "name": "Bitcoin",
+      "image": "https://example.com/btc.png",
+      "current_price": 67000.0,
+      "market_cap": 1320000000000,
+      "market_cap_rank": 1,
+      "total_volume": 34200000000,
+      "price_change_percentage_24h": 2.41,
+      "price_change_percentage_7d_in_currency": -1.12
+    },
+    "ethereum": {
+      "id": "ethereum",
+      "symbol": "eth",
+      "name": "Ethereum",
+      "image": "https://example.com/eth.png",
+      "current_price": 3500.0,
+      "market_cap": 420000000000,
+      "market_cap_rank": 2,
+      "total_volume": 15000000000,
+      "price_change_percentage_24h": 1.5,
+      "price_change_percentage_7d_in_currency": 2.3
+    }
+  },
+  "nok_rate": 10.5,
+  "sequence": [
+    [
+      "deposit",
+      {
+        "amount": 10000
+      }
+    ],
+    [
+      "buy",
+      {
+        "coin_id": "bitcoin",
+        "usd_amount": 6700
+      }
+    ],
+    [
+      "buy",
+      {
+        "coin_id": "ethereum",
+        "usd_amount": 1750
+      }
+    ],
+    [
+      "buy",
+      {
+        "coin_id": "bitcoin",
+        "usd_amount": 1340
+      }
+    ],
+    [
+      "sell",
+      {
+        "coin_id": "bitcoin",
+        "usd_amount": 3350
+      }
+    ],
+    [
+      "withdraw",
+      {
+        "amount": 500
+      }
+    ]
+  ],
+  "steps": [
+    {
+      "action": "deposit",
+      "body": {
+        "amount": 10000
+      },
+      "status": 200,
+      "response": {
+        "portfolio_name": "default",
+        "cash": 10000.0,
+        "cash_nok": 105000.0,
+        "total_deposited": 10000.0,
+        "total_withdrawn": 0.0,
+        "net_invested": 10000.0,
+        "holdings": [],
+        "total_value": 10000.0,
+        "total_value_nok": 105000.0,
+        "total_pnl": 0.0,
+        "total_pnl_nok": 0.0,
+        "total_pnl_pct": 0.0,
+        "nok_rate": 10.5,
+        "transactions": [
+          {
+            "id": "txn_0001",
+            "type": "deposit",
+            "total": 10000.0,
+            "timestamp": "2026-06-21T03:04:17.036615+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "action": "buy",
+      "body": {
+        "coin_id": "bitcoin",
+        "usd_amount": 6700
+      },
+      "status": 200,
+      "response": {
+        "portfolio_name": "default",
+        "cash": 3300.0,
+        "cash_nok": 34650.0,
+        "total_deposited": 10000.0,
+        "total_withdrawn": 0.0,
+        "net_invested": 10000.0,
+        "holdings": [
+          {
+            "coin_id": "bitcoin",
+            "symbol": "btc",
+            "name": "Bitcoin",
+            "image": "https://example.com/btc.png",
+            "amount": 0.1,
+            "avg_buy_price": 67000.0,
+            "current_price": 67000.0,
+            "value": 6700.0,
+            "value_nok": 70350.0,
+            "pnl": 0.0,
+            "pnl_nok": 0.0,
+            "pnl_pct": 0.0
+          }
+        ],
+        "total_value": 10000.0,
+        "total_value_nok": 105000.0,
+        "total_pnl": 0.0,
+        "total_pnl_nok": 0.0,
+        "total_pnl_pct": 0.0,
+        "nok_rate": 10.5,
+        "transactions": [
+          {
+            "id": "txn_0002",
+            "type": "buy",
+            "coin_id": "bitcoin",
+            "amount": 0.1,
+            "price": 67000.0,
+            "total": 6700.0,
+            "timestamp": "2026-06-21T03:04:17.040861+00:00"
+          },
+          {
+            "id": "txn_0001",
+            "type": "deposit",
+            "total": 10000.0,
+            "timestamp": "2026-06-21T03:04:17.036615+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "action": "buy",
+      "body": {
+        "coin_id": "ethereum",
+        "usd_amount": 1750
+      },
+      "status": 200,
+      "response": {
+        "portfolio_name": "default",
+        "cash": 1550.0,
+        "cash_nok": 16275.0,
+        "total_deposited": 10000.0,
+        "total_withdrawn": 0.0,
+        "net_invested": 10000.0,
+        "holdings": [
+          {
+            "coin_id": "bitcoin",
+            "symbol": "btc",
+            "name": "Bitcoin",
+            "image": "https://example.com/btc.png",
+            "amount": 0.1,
+            "avg_buy_price": 67000.0,
+            "current_price": 67000.0,
+            "value": 6700.0,
+            "value_nok": 70350.0,
+            "pnl": 0.0,
+            "pnl_nok": 0.0,
+            "pnl_pct": 0.0
+          },
+          {
+            "coin_id": "ethereum",
+            "symbol": "eth",
+            "name": "Ethereum",
+            "image": "https://example.com/eth.png",
+            "amount": 0.5,
+            "avg_buy_price": 3500.0,
+            "current_price": 3500.0,
+            "value": 1750.0,
+            "value_nok": 18375.0,
+            "pnl": 0.0,
+            "pnl_nok": 0.0,
+            "pnl_pct": 0.0
+          }
+        ],
+        "total_value": 10000.0,
+        "total_value_nok": 105000.0,
+        "total_pnl": 0.0,
+        "total_pnl_nok": 0.0,
+        "total_pnl_pct": 0.0,
+        "nok_rate": 10.5,
+        "transactions": [
+          {
+            "id": "txn_0003",
+            "type": "buy",
+            "coin_id": "ethereum",
+            "amount": 0.5,
+            "price": 3500.0,
+            "total": 1750.0,
+            "timestamp": "2026-06-21T03:04:17.044247+00:00"
+          },
+          {
+            "id": "txn_0002",
+            "type": "buy",
+            "coin_id": "bitcoin",
+            "amount": 0.1,
+            "price": 67000.0,
+            "total": 6700.0,
+            "timestamp": "2026-06-21T03:04:17.040861+00:00"
+          },
+          {
+            "id": "txn_0001",
+            "type": "deposit",
+            "total": 10000.0,
+            "timestamp": "2026-06-21T03:04:17.036615+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "action": "buy",
+      "body": {
+        "coin_id": "bitcoin",
+        "usd_amount": 1340
+      },
+      "status": 200,
+      "response": {
+        "portfolio_name": "default",
+        "cash": 210.0,
+        "cash_nok": 2205.0,
+        "total_deposited": 10000.0,
+        "total_withdrawn": 0.0,
+        "net_invested": 10000.0,
+        "holdings": [
+          {
+            "coin_id": "bitcoin",
+            "symbol": "btc",
+            "name": "Bitcoin",
+            "image": "https://example.com/btc.png",
+            "amount": 0.12000000000000001,
+            "avg_buy_price": 67000.0,
+            "current_price": 67000.0,
+            "value": 8040.0,
+            "value_nok": 84420.0,
+            "pnl": 0.0,
+            "pnl_nok": 0.0,
+            "pnl_pct": 0.0
+          },
+          {
+            "coin_id": "ethereum",
+            "symbol": "eth",
+            "name": "Ethereum",
+            "image": "https://example.com/eth.png",
+            "amount": 0.5,
+            "avg_buy_price": 3500.0,
+            "current_price": 3500.0,
+            "value": 1750.0,
+            "value_nok": 18375.0,
+            "pnl": 0.0,
+            "pnl_nok": 0.0,
+            "pnl_pct": 0.0
+          }
+        ],
+        "total_value": 10000.0,
+        "total_value_nok": 105000.0,
+        "total_pnl": 0.0,
+        "total_pnl_nok": 0.0,
+        "total_pnl_pct": 0.0,
+        "nok_rate": 10.5,
+        "transactions": [
+          {
+            "id": "txn_0004",
+            "type": "buy",
+            "coin_id": "bitcoin",
+            "amount": 0.02,
+            "price": 67000.0,
+            "total": 1340.0,
+            "timestamp": "2026-06-21T03:04:17.047433+00:00"
+          },
+          {
+            "id": "txn_0003",
+            "type": "buy",
+            "coin_id": "ethereum",
+            "amount": 0.5,
+            "price": 3500.0,
+            "total": 1750.0,
+            "timestamp": "2026-06-21T03:04:17.044247+00:00"
+          },
+          {
+            "id": "txn_0002",
+            "type": "buy",
+            "coin_id": "bitcoin",
+            "amount": 0.1,
+            "price": 67000.0,
+            "total": 6700.0,
+            "timestamp": "2026-06-21T03:04:17.040861+00:00"
+          },
+          {
+            "id": "txn_0001",
+            "type": "deposit",
+            "total": 10000.0,
+            "timestamp": "2026-06-21T03:04:17.036615+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "action": "sell",
+      "body": {
+        "coin_id": "bitcoin",
+        "usd_amount": 3350
+      },
+      "status": 200,
+      "response": {
+        "portfolio_name": "default",
+        "cash": 3560.0,
+        "cash_nok": 37380.0,
+        "total_deposited": 10000.0,
+        "total_withdrawn": 0.0,
+        "net_invested": 10000.0,
+        "holdings": [
+          {
+            "coin_id": "bitcoin",
+            "symbol": "btc",
+            "name": "Bitcoin",
+            "image": "https://example.com/btc.png",
+            "amount": 0.07,
+            "avg_buy_price": 67000.0,
+            "current_price": 67000.0,
+            "value": 4690.0,
+            "value_nok": 49245.0,
+            "pnl": 0.0,
+            "pnl_nok": 0.0,
+            "pnl_pct": 0.0
+          },
+          {
+            "coin_id": "ethereum",
+            "symbol": "eth",
+            "name": "Ethereum",
+            "image": "https://example.com/eth.png",
+            "amount": 0.5,
+            "avg_buy_price": 3500.0,
+            "current_price": 3500.0,
+            "value": 1750.0,
+            "value_nok": 18375.0,
+            "pnl": 0.0,
+            "pnl_nok": 0.0,
+            "pnl_pct": 0.0
+          }
+        ],
+        "total_value": 10000.0,
+        "total_value_nok": 105000.0,
+        "total_pnl": 0.0,
+        "total_pnl_nok": 0.0,
+        "total_pnl_pct": 0.0,
+        "nok_rate": 10.5,
+        "transactions": [
+          {
+            "id": "txn_0005",
+            "type": "sell",
+            "coin_id": "bitcoin",
+            "amount": 0.05,
+            "price": 67000.0,
+            "total": 3350.0,
+            "timestamp": "2026-06-21T03:04:17.051331+00:00"
+          },
+          {
+            "id": "txn_0004",
+            "type": "buy",
+            "coin_id": "bitcoin",
+            "amount": 0.02,
+            "price": 67000.0,
+            "total": 1340.0,
+            "timestamp": "2026-06-21T03:04:17.047433+00:00"
+          },
+          {
+            "id": "txn_0003",
+            "type": "buy",
+            "coin_id": "ethereum",
+            "amount": 0.5,
+            "price": 3500.0,
+            "total": 1750.0,
+            "timestamp": "2026-06-21T03:04:17.044247+00:00"
+          },
+          {
+            "id": "txn_0002",
+            "type": "buy",
+            "coin_id": "bitcoin",
+            "amount": 0.1,
+            "price": 67000.0,
+            "total": 6700.0,
+            "timestamp": "2026-06-21T03:04:17.040861+00:00"
+          },
+          {
+            "id": "txn_0001",
+            "type": "deposit",
+            "total": 10000.0,
+            "timestamp": "2026-06-21T03:04:17.036615+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "action": "withdraw",
+      "body": {
+        "amount": 500
+      },
+      "status": 200,
+      "response": {
+        "portfolio_name": "default",
+        "cash": 3060.0,
+        "cash_nok": 32130.0,
+        "total_deposited": 10000.0,
+        "total_withdrawn": 500.0,
+        "net_invested": 9500.0,
+        "holdings": [
+          {
+            "coin_id": "bitcoin",
+            "symbol": "btc",
+            "name": "Bitcoin",
+            "image": "https://example.com/btc.png",
+            "amount": 0.07,
+            "avg_buy_price": 67000.0,
+            "current_price": 67000.0,
+            "value": 4690.0,
+            "value_nok": 49245.0,
+            "pnl": 0.0,
+            "pnl_nok": 0.0,
+            "pnl_pct": 0.0
+          },
+          {
+            "coin_id": "ethereum",
+            "symbol": "eth",
+            "name": "Ethereum",
+            "image": "https://example.com/eth.png",
+            "amount": 0.5,
+            "avg_buy_price": 3500.0,
+            "current_price": 3500.0,
+            "value": 1750.0,
+            "value_nok": 18375.0,
+            "pnl": 0.0,
+            "pnl_nok": 0.0,
+            "pnl_pct": 0.0
+          }
+        ],
+        "total_value": 9500.0,
+        "total_value_nok": 99750.0,
+        "total_pnl": 0.0,
+        "total_pnl_nok": 0.0,
+        "total_pnl_pct": 0.0,
+        "nok_rate": 10.5,
+        "transactions": [
+          {
+            "id": "txn_0006",
+            "type": "withdrawal",
+            "total": 500.0,
+            "timestamp": "2026-06-21T03:04:17.054944+00:00"
+          },
+          {
+            "id": "txn_0005",
+            "type": "sell",
+            "coin_id": "bitcoin",
+            "amount": 0.05,
+            "price": 67000.0,
+            "total": 3350.0,
+            "timestamp": "2026-06-21T03:04:17.051331+00:00"
+          },
+          {
+            "id": "txn_0004",
+            "type": "buy",
+            "coin_id": "bitcoin",
+            "amount": 0.02,
+            "price": 67000.0,
+            "total": 1340.0,
+            "timestamp": "2026-06-21T03:04:17.047433+00:00"
+          },
+          {
+            "id": "txn_0003",
+            "type": "buy",
+            "coin_id": "ethereum",
+            "amount": 0.5,
+            "price": 3500.0,
+            "total": 1750.0,
+            "timestamp": "2026-06-21T03:04:17.044247+00:00"
+          },
+          {
+            "id": "txn_0002",
+            "type": "buy",
+            "coin_id": "bitcoin",
+            "amount": 0.1,
+            "price": 67000.0,
+            "total": 6700.0,
+            "timestamp": "2026-06-21T03:04:17.040861+00:00"
+          },
+          {
+            "id": "txn_0001",
+            "type": "deposit",
+            "total": 10000.0,
+            "timestamp": "2026-06-21T03:04:17.036615+00:00"
+          }
+        ]
+      }
+    }
+  ],
+  "final": {
+    "portfolio_name": "default",
+    "cash": 3060.0,
+    "cash_nok": 32130.0,
+    "total_deposited": 10000.0,
+    "total_withdrawn": 500.0,
+    "net_invested": 9500.0,
+    "holdings": [
+      {
+        "coin_id": "bitcoin",
+        "symbol": "btc",
+        "name": "Bitcoin",
+        "image": "https://example.com/btc.png",
+        "amount": 0.07,
+        "avg_buy_price": 67000.0,
+        "current_price": 67000.0,
+        "value": 4690.0,
+        "value_nok": 49245.0,
+        "pnl": 0.0,
+        "pnl_nok": 0.0,
+        "pnl_pct": 0.0
+      },
+      {
+        "coin_id": "ethereum",
+        "symbol": "eth",
+        "name": "Ethereum",
+        "image": "https://example.com/eth.png",
+        "amount": 0.5,
+        "avg_buy_price": 3500.0,
+        "current_price": 3500.0,
+        "value": 1750.0,
+        "value_nok": 18375.0,
+        "pnl": 0.0,
+        "pnl_nok": 0.0,
+        "pnl_pct": 0.0
+      }
+    ],
+    "total_value": 9500.0,
+    "total_value_nok": 99750.0,
+    "total_pnl": 0.0,
+    "total_pnl_nok": 0.0,
+    "total_pnl_pct": 0.0,
+    "nok_rate": 10.5,
+    "transactions": [
+      {
+        "id": "txn_0006",
+        "type": "withdrawal",
+        "total": 500.0,
+        "timestamp": "2026-06-21T03:04:17.054944+00:00"
+      },
+      {
+        "id": "txn_0005",
+        "type": "sell",
+        "coin_id": "bitcoin",
+        "amount": 0.05,
+        "price": 67000.0,
+        "total": 3350.0,
+        "timestamp": "2026-06-21T03:04:17.051331+00:00"
+      },
+      {
+        "id": "txn_0004",
+        "type": "buy",
+        "coin_id": "bitcoin",
+        "amount": 0.02,
+        "price": 67000.0,
+        "total": 1340.0,
+        "timestamp": "2026-06-21T03:04:17.047433+00:00"
+      },
+      {
+        "id": "txn_0003",
+        "type": "buy",
+        "coin_id": "ethereum",
+        "amount": 0.5,
+        "price": 3500.0,
+        "total": 1750.0,
+        "timestamp": "2026-06-21T03:04:17.044247+00:00"
+      },
+      {
+        "id": "txn_0002",
+        "type": "buy",
+        "coin_id": "bitcoin",
+        "amount": 0.1,
+        "price": 67000.0,
+        "total": 6700.0,
+        "timestamp": "2026-06-21T03:04:17.040861+00:00"
+      },
+      {
+        "id": "txn_0001",
+        "type": "deposit",
+        "total": 10000.0,
+        "timestamp": "2026-06-21T03:04:17.036615+00:00"
+      }
+    ]
+  }
+}
