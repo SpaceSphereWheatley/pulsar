@@ -1,0 +1,30 @@
+name = "pulsar"
+main = "worker/index.js"
+compatibility_date = "2026-01-01"
+
+# D1 — created with `wrangler d1 create pulsar`; paste the returned database_id.
+[[d1_databases]]
+binding = "DB"
+database_name = "pulsar"
+database_id = "f95879d9-6f35-498e-b180-13b9a0b09926"
+
+# Cron triggers replace the APScheduler jobs (see runScheduled in worker/index.js).
+# Coins was 60s in the FastAPI app; Cron's floor is 1 minute and CoinGecko's free
+# tier doesn't reward sub-5m polling, so coins refresh is every 5 minutes.
+[triggers]
+crons = [
+  "*/5 * * * *",   # refresh top-10 coins
+  "0 */6 * * *",   # refresh OHLC (all coins) + retrain ML
+  "0 * * * *",     # Fear & Greed + USD→NOK rate
+  "*/30 * * * *",  # crypto news
+  "0 0 * * *",     # daily portfolio value snapshots
+]
+
+# Secrets (set via `wrangler secret put`, never committed):
+#   PULSAR_SECRET_KEY            — JWT signing secret (openssl rand -hex 32)
+#   PULSAR_ADMIN_USERNAME        — seeded admin (default: admin)
+#   PULSAR_ADMIN_PASSWORD        — seeded admin password (default: admin)
+#   PULSAR_TOKEN_EXPIRE_MINUTES  — JWT lifetime (default: 60)
+#   COINGECKO_API_KEY            — CoinGecko Demo key (OHLC/markets/news)
+#   COINGECKO_PRO_API_KEY        — use instead for a paid CoinGecko Pro plan
+#   PAGES_HOST                   — Pages project hostname to proxy non-API requests to

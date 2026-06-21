@@ -17,3 +17,8 @@ server/portfolio_*.json
 server/portfolio_history_*.json
 server/watchlist_*.json
 server/users.json
+
+# JS test toolchain (vitest) — not deployed; worker stays buildless
+node_modules/
+.vitest/
+server/ml_scores.json

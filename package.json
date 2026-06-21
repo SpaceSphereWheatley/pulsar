@@ -1,0 +1,14 @@
+{
+  "name": "pulsar-worker",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker + readiness test suite for the PULSAR crypto dashboard migration.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "fixtures": "python3 migration/generate_fixtures.py && python3 migration/generate_portfolio_fixture.py"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
