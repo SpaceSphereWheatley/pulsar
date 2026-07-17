@@ -1,5 +1,5 @@
 // PULSAR Cloudflare Worker — the entire backend. Owns all /api/* routes, auth,
-// and scheduled cache refresh; proxies everything else to the Pages project
+// and on-demand cache refresh; proxies everything else to the Pages project
 // (the static frontend). Single-file router in the panhandle style.
 
 import { createToken, decodeToken } from "./auth.js";
@@ -18,7 +18,9 @@ import {
   getCoinsCache,
   getFeargreed,
   getNews,
+  getNokMeta,
   getOhlc,
+  getOhlcTs,
   listPortfolios,
   listUsers,
   loadHistory,
@@ -38,12 +40,12 @@ import {
 } from "./market.js";
 import { recommend } from "./recommendation.js";
 import {
-  refreshAllOhlc,
   refreshCoins,
   refreshFeargreed,
   refreshMl,
   refreshNews,
   refreshNokRate,
+  refreshOhlc,
 } from "./coingecko.js";
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
@@ -119,9 +121,72 @@ async function getCoinPrice(env, coinId) {
   return coin ? coin.current_price : null;
 }
 
+// ── On-demand cache refresh (replaces the old Cron Triggers) ──────────────────
+// No more scheduled() handler — every cache refreshes itself the next time a
+// request actually needs it. Fresh-enough data is served as-is; stale data is
+// served immediately while a refresh runs via ctx.waitUntil (fire-and-forget,
+// doesn't block the response). Missing data blocks once, so cold caches still
+// get populated on the very first request that needs them.
+
+const STALE_COINS_S = 5 * 60; // was */5 * * * *
+const STALE_OHLC_S = 6 * 60 * 60; // was 0 */6 * * *
+const STALE_FEARGREED_S = 60 * 60; // was 0 * * * *
+const STALE_NEWS_S = 30 * 60; // was */30 * * * *
+
+function isStale(ts, maxAgeSeconds) {
+  return !ts || Date.now() / 1000 - ts > maxAgeSeconds;
+}
+
+// Runs fn() in the background when a real ExecutionContext is available
+// (production); otherwise awaits it inline so callers without ctx (tests, or a
+// direct worker.fetch() call) still observe the refreshed state deterministically.
+async function background(ctx, fn) {
+  const p = fn().catch(() => {});
+  if (ctx && typeof ctx.waitUntil === "function") {
+    ctx.waitUntil(p);
+  } else {
+    await p;
+  }
+}
+
+async function ensureCoinsFresh(env, ctx) {
+  let { cache, ts } = await getCoinsCache(env);
+  if (!Object.keys(cache).length) {
+    try {
+      cache = await refreshCoins(env);
+      ts = Date.now() / 1000;
+    } catch {
+      /* stays empty; caller 503s */
+    }
+  } else if (isStale(ts, STALE_COINS_S)) {
+    await background(ctx, () => refreshCoins(env));
+  }
+  return { cache, ts };
+}
+
+// Missing or stale OHLC never blocks the response — buildCoin/buildSignals
+// already treat missing indicators as `null` (insufficient candles). ML scores
+// are retrained in the background whenever any coin's OHLC was refreshed.
+async function ensureOhlcFresh(env, ctx, coinIds) {
+  let mlNeeded = false;
+  for (const coinId of coinIds) {
+    const ts = await getOhlcTs(env, coinId);
+    if (isStale(ts, STALE_OHLC_S)) {
+      mlNeeded = true;
+      await background(ctx, () => refreshOhlc(env, coinId));
+    }
+  }
+  if (mlNeeded) await background(ctx, () => refreshMl(env));
+}
+
+async function maybeRefreshNok(env, ctx) {
+  const { ts } = await getNokMeta(env);
+  if (isStale(ts, STALE_FEARGREED_S)) await background(ctx, () => refreshNokRate(env));
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
-async function route(req, env) {
+async function route(req, env, ctx) {
   const url = new URL(req.url);
   const path = url.pathname;
   const method = req.method;
@@ -187,15 +252,16 @@ async function route(req, env) {
   }
 
   if (path === "/api/coins" && method === "GET") {
-    const { cache, ts } = await getCoinsCache(env);
+    const { cache, ts } = await ensureCoinsFresh(env, ctx);
     if (!Object.keys(cache).length) throw new HttpError(503, "Coin data not yet available");
+    await ensureOhlcFresh(env, ctx, Object.keys(cache));
     const coins = [];
     for (const raw of Object.values(cache)) coins.push(await buildCoin(env, raw));
     return json({ updated_at: new Date(ts * 1000).toISOString(), coins });
   }
 
   if (path === "/api/market" && method === "GET") {
-    const { cache } = await getCoinsCache(env);
+    const { cache } = await ensureCoinsFresh(env, ctx);
     if (!Object.keys(cache).length) throw new HttpError(503, "Coin data not yet available");
     const coins = Object.values(cache);
     const totalMc = coins.reduce((a, c) => a + (c.market_cap || 0), 0);
@@ -216,14 +282,17 @@ async function route(req, env) {
   }
 
   if (path === "/api/feargreed" && method === "GET") {
-    let { data } = await getFeargreed(env);
+    let { data, ts } = await getFeargreed(env);
     if (!data) {
       try {
         data = await refreshFeargreed(env);
       } catch {
         /* fall through to 503 */
       }
+    } else if (isStale(ts, STALE_FEARGREED_S)) {
+      await background(ctx, () => refreshFeargreed(env));
     }
+    await maybeRefreshNok(env, ctx);
     if (!data) throw new HttpError(503, "Fear & Greed data not available");
     const pts = data.data || [];
     if (!pts.length) throw new HttpError(503, "Fear & Greed data empty");
@@ -250,6 +319,8 @@ async function route(req, env) {
 
   if ((m = path.match(/^\/api\/history\/(.+)$/)) && method === "GET") {
     const coinId = decodeURIComponent(m[1]);
+    const { cache: trackedCoins } = await getCoinsCache(env);
+    if (trackedCoins[coinId]) await ensureOhlcFresh(env, ctx, [coinId]);
     const ohlc = await getOhlc(env, coinId);
     if (ohlc === null) throw new HttpError(404, `No history for ${coinId}`);
     const data = ohlc.map((c) => ({
@@ -263,8 +334,9 @@ async function route(req, env) {
   }
 
   if (path === "/api/signals" && method === "GET") {
-    const { cache } = await getCoinsCache(env);
+    const { cache } = await ensureCoinsFresh(env, ctx);
     if (!Object.keys(cache).length) throw new HttpError(503, "Coin data not yet available");
+    await ensureOhlcFresh(env, ctx, Object.keys(cache));
     const { detailed, ts } = await buildSignals(env, true);
     return json({ updated_at: new Date(ts * 1000).toISOString(), signals: detailed });
   }
@@ -278,12 +350,16 @@ async function route(req, env) {
       } catch {
         news = news || [];
       }
+    } else if (isStale(ts, STALE_NEWS_S)) {
+      await background(ctx, () => refreshNews(env));
     }
     return json({ news, updated_at: ts ? new Date(ts * 1000).toISOString() : null });
   }
 
   if ((m = path.match(/^\/api\/backtest\/(.+)$/)) && method === "GET") {
     const coinId = decodeURIComponent(m[1]);
+    const { cache: trackedCoins } = await getCoinsCache(env);
+    if (trackedCoins[coinId]) await ensureOhlcFresh(env, ctx, [coinId]);
     const ohlc = await getOhlc(env, coinId);
     if (ohlc === null) throw new HttpError(404, `No OHLC data for ${coinId}`);
     return json(runBacktest(ohlc));
@@ -338,7 +414,9 @@ async function route(req, env) {
   // ---- Portfolio operations ----
   if (path === "/api/portfolio" && method === "GET") {
     const user = await currentUser(req, env);
-    return json(await portfolioResponse(env, user.username, qp("portfolio", "default")));
+    // Also upserts today's history snapshot (idempotent) — replaces the old
+    // midnight cron sweep with "record on next view", same as every mutation.
+    return json(await writeResponse(env, user.username, qp("portfolio", "default")));
   }
   if (path === "/api/portfolio/history" && method === "GET") {
     const user = await currentUser(req, env);
@@ -499,45 +577,12 @@ async function proxyToPages(req, env) {
   return fetch(new Request(url, req));
 }
 
-// ── Scheduled (cron) — replaces APScheduler jobs ──────────────────────────────
-// wrangler.toml maps several cron expressions; dispatch by event.cron.
-
-async function runScheduled(event, env) {
-  const cron = event.cron;
-  if (cron === "*/5 * * * *") {
-    await refreshCoins(env); // coins (was 60s; Cron min is 1m, use 5m)
-  } else if (cron === "0 */6 * * *") {
-    await refreshAllOhlc(env); // OHLC every 6h
-    await refreshMl(env); // ML retrain after fresh OHLC
-  } else if (cron === "0 * * * *") {
-    await refreshFeargreed(env); // hourly
-    await refreshNokRate(env); // hourly
-  } else if (cron === "*/30 * * * *") {
-    await refreshNews(env); // every 30m
-  } else if (cron === "0 0 * * *") {
-    await snapshotAllPortfolios(env); // daily
-  }
-}
-
-async function snapshotAllPortfolios(env) {
-  for (const u of await listUsers(env)) {
-    for (const pfName of await listPortfolios(env, u.username)) {
-      try {
-        const resp = await portfolioResponse(env, u.username, pfName);
-        await recordSnapshot(env, u.username, resp.total_value, resp.cash, resp.total_pnl_pct, pfName);
-      } catch {
-        /* one bad portfolio shouldn't stop the job */
-      }
-    }
-  }
-}
-
-// ── Entry points ──────────────────────────────────────────────────────────────
+// ── Entry point ─────────────────────────────────────────────────────────────
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     try {
-      return await route(req, env);
+      return await route(req, env, ctx);
     } catch (e) {
       if (e instanceof HttpError) {
         return json({ detail: e.detail }, e.status);
@@ -545,11 +590,4 @@ export default {
       return json({ detail: "Internal error", error: String(e?.message || e) }, 500);
     }
   },
-
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(runScheduled(event, env));
-  },
 };
-
-// Exported for tests (drive the cron handler directly against a seeded D1).
-export { runScheduled };

@@ -67,17 +67,6 @@ export async function refreshOhlc(env, coinId) {
   return raw;
 }
 
-export async function refreshAllOhlc(env) {
-  const { cache } = await getCoinsCache(env);
-  for (const coinId of Object.keys(cache)) {
-    try {
-      await refreshOhlc(env, coinId);
-    } catch {
-      // one bad coin shouldn't abort the rest
-    }
-  }
-}
-
 export async function refreshFeargreed(env) {
   const data = await withRetry(() => getJson("https://api.alternative.me/fng/?limit=7"));
   await setFeargreed(env, data, Date.now() / 1000);

@@ -1,19 +1,12 @@
 # TODO
 
-## Cron trigger budget: max 2
+Nothing outstanding right now.
 
-The app's Cloudflare deployment is capped at **2 cron triggers**. `wrangler.toml`
-currently defines 5 (`crons = [...]` — coins/OHLC+ML/feargreed+NOK/news/portfolio
-snapshots), which is over budget and needs to be redesigned to fit within 2.
-
-- [ ] Consolidate the 5 scheduled refreshes (coins, OHLC+ML retrain, Fear & Greed
-      + USD→NOK, news, daily portfolio snapshots) down to **2 cron triggers total**.
-      Likely approach: one high-frequency trigger (e.g. every 5 min) that fans out
-      to whichever refreshes are due based on elapsed time since last run (stored in
-      D1 or KV), plus one low-frequency trigger (e.g. daily) for the portfolio
-      snapshot job — or fold snapshotting into the frequent trigger too and drop to
-      a single cron if possible.
-  - Alternative: move less time-sensitive refreshes (news, NOK rate) to lazy
-    on-demand refresh triggered by request + staleness check, instead of cron.
-- [ ] Update `wrangler.toml`'s `[triggers] crons` list to match the redesigned
-      schedule once implemented.
+`wrangler.toml` no longer defines any `[triggers] crons` — the Cloudflare
+deployment's cron trigger budget concern is moot. Every cache in
+`worker/index.js` (coins, OHLC+ML, Fear & Greed + USD→NOK, news, daily
+portfolio snapshots) now refreshes on demand: fresh data is served as-is,
+stale data is served immediately while a background refresh runs via
+`ctx.waitUntil`, and missing data is fetched inline the first time a request
+needs it. See `ensureCoinsFresh`/`ensureOhlcFresh`/`maybeRefreshNok` in
+`worker/index.js`.
