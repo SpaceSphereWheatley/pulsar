@@ -1,8 +1,8 @@
 // Test harness: builds an env with a fresh D1, seeds the market caches with the
 // same MOCK_* data conftest.py uses, and exposes a fetch driver + login helper.
 
-import worker, { runScheduled } from "../../index.js";
-import { _resetSeedGuard, setCoinsCache, setFeargreed, setNews, setOhlc } from "../../db.js";
+import worker from "../../index.js";
+import { _resetSeedGuard, setCoinsCache, setFeargreed, setNews, setNokRate, setOhlc } from "../../db.js";
 import { makeEnv } from "./d1.js";
 
 export const MOCK_COINS = {
@@ -68,6 +68,7 @@ export async function setupEnv({ seedCaches = true, overrides = {} } = {}) {
     for (const coinId of Object.keys(MOCK_COINS)) await setOhlc(env, coinId, MOCK_OHLC, now);
     await setFeargreed(env, MOCK_FEARGREED, now);
     await setNews(env, MOCK_NEWS, now);
+    await setNokRate(env, 10.5, now); // matches getNokRate's unseeded fallback
   }
   return env;
 }
@@ -99,5 +100,3 @@ export async function login(env, username = "admin", password = "admin") {
   if (r.status !== 200) throw new Error(`login failed: ${r.status} ${JSON.stringify(r.body)}`);
   return r.body.access_token;
 }
-
-export { runScheduled };

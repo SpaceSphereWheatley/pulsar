@@ -349,6 +349,12 @@ export async function getOhlc(env, coinId) {
   return row ? JSON.parse(row.data) : null;
 }
 
+// Staleness check only — avoids parsing the (potentially large) OHLC payload.
+export async function getOhlcTs(env, coinId) {
+  const row = await env.DB.prepare("SELECT updated_at FROM ohlc_cache WHERE coin_id = ?1").bind(coinId).first();
+  return row ? row.updated_at : 0;
+}
+
 export async function setOhlc(env, coinId, data, ts) {
   await env.DB.prepare(
     "INSERT INTO ohlc_cache (coin_id, data, updated_at) VALUES (?1, ?2, ?3) ON CONFLICT(coin_id) DO UPDATE SET data = ?2, updated_at = ?3",
@@ -386,6 +392,12 @@ export async function setNews(env, news, ts) {
 export async function getNokRate(env) {
   const row = await env.DB.prepare("SELECT value FROM meta WHERE key = 'nok_rate'").first();
   return row ? parseFloat(row.value) : 10.5; // fallback matches data.py
+}
+
+// Staleness check only — rate + when it was last fetched.
+export async function getNokMeta(env) {
+  const row = await env.DB.prepare("SELECT value, updated_at FROM meta WHERE key = 'nok_rate'").first();
+  return row ? { rate: parseFloat(row.value), ts: row.updated_at } : { rate: 10.5, ts: 0 };
 }
 
 export async function setNokRate(env, rate, ts) {

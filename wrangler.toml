@@ -8,17 +8,11 @@ binding = "DB"
 database_name = "pulsar"
 database_id = "f95879d9-6f35-498e-b180-13b9a0b09926"
 
-# Cron triggers replace the APScheduler jobs (see runScheduled in worker/index.js).
-# Coins was 60s in the FastAPI app; Cron's floor is 1 minute and CoinGecko's free
-# tier doesn't reward sub-5m polling, so coins refresh is every 5 minutes.
-[triggers]
-crons = [
-  "*/5 * * * *",   # refresh top-10 coins
-  "0 */6 * * *",   # refresh OHLC (all coins) + retrain ML
-  "0 * * * *",     # Fear & Greed + USD→NOK rate
-  "*/30 * * * *",  # crypto news
-  "0 0 * * *",     # daily portfolio value snapshots
-]
+# No [triggers] cron block: caches refresh on demand (see the on-demand refresh
+# helpers in worker/index.js — ensureCoinsFresh/ensureOhlcFresh/maybeRefreshNok)
+# instead of a scheduled sweep. Each cache refreshes itself the next time a
+# request needs it; stale-but-present data is served immediately while a
+# refresh runs via ctx.waitUntil.
 
 # Secrets (set via `wrangler secret put`, never committed):
 #   PULSAR_SECRET_KEY            — JWT signing secret (openssl rand -hex 32)
